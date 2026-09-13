@@ -1,1 +1,42 @@
-<!doctype html><html lang="es-MX"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ title }} · Por la Sombrita</title><meta name="description" content="{{ description|default('Documentación y deliberación de Por la Sombrita, comunidad ciudadana de sombra y confort peatonal en Monterrey. Prototipo abierto a lectura pública.') }}"><link rel="canonical" href="{{ base_url }}{{ request.path }}"><link rel="icon" href="{{ url_for('static',filename='sol.svg') }}"><link rel="stylesheet" href="{{ url_for('static',filename='estilos.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='plataforma.css') }}"><script defer src="{{ url_for('static',filename='plataforma.js') }}"></script><meta property="og:title" content="{{ title }} · Por la Sombrita"><meta property="og:image" content="{{ base_url }}/static/compartir.png"><meta property="og:type" content="website"><meta property="og:url" content="{{ base_url }}{{ request.path }}"><meta name="theme-color" content="#f4ecda"><script type="application/ld+json" nonce="{{ nonce }}">{{ {'@context':'https://schema.org','@type':'WebPage','name':title,'url':base_url+request.path,'inLanguage':'es-MX','isPartOf':{'@type':'WebSite','name':'Por la Sombrita','url':base_url}}|tojson }}</script></head><body><a class="salto" href="#contenido">Saltar al contenido</a><header class="cabecera"><div class="contenedor barra"><a class="marca" href="/"><span class="sol" aria-hidden="true">✳</span><span>POR LA<br>SOMBRITA</span></a><nav aria-label="Navegación principal"><a href="/#documentos">Documentos</a><a href="/discusiones">Discusiones</a><a href="/revision">Revisión</a><a href="/miembros">Comunidad</a><a class="nav-participa" href="/cuenta">{{ me.name if me else 'Entrar' }}</a></nav></div></header><div class="prototipo"><div class="contenedor">PROTOTIPO COMUNITARIO <span>Lectura pública · participación con cuenta · decisiones con historial</span></div></div>{% if me and me.must_change %}<div class="aviso contenedor">Tu contraseña es provisional. <a href="/cuenta">Cámbiala para comenzar a participar.</a></div>{% endif %}<main id="contenido">{% block content %}{% endblock %}</main><footer class="pie"><div class="contenedor"><div class="pie-superior"><a class="marca" href="/"><span class="sol" aria-hidden="true">✳</span><span>POR LA<br>SOMBRITA</span></a><p>Conocimiento ciudadano.<br>Una ciudad más caminable.</p><a href="/participa">Participación y privacidad ↗</a></div><div class="pie-inferior"><span>Monterrey, Nuevo León · comunidad surgida en LABNL</span><a href="/discusiones?estado=history">Historial de discusiones</a><a href="/fuentes.html">Fuentes</a><a href="https://github.com/luismario-zg/por-la-sombrita-plataforma">Código público</a>{% if me and me.role=='owner' %}<a href="/administracion">Administrar permisos</a>{% endif %}</div></div></footer><div id="notificacion" role="status" aria-live="polite"></div></body></html>
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title }} · Por la Sombrita</title>
+  <meta name="description" content="{{ description|default('Documentación y deliberación de Por la Sombrita, comunidad ciudadana de sombra y confort peatonal en Monterrey. Prototipo abierto a lectura pública.') }}">
+  <link rel="canonical" href="{{ base_url }}{{ request.path }}">
+  <link rel="icon" href="{{ url_for('static',filename='sol.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='estilos.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='plataforma.css') }}">
+  <script defer src="{{ url_for('static',filename='plataforma.js') }}"></script>
+  <meta property="og:title" content="{{ title }} · Por la Sombrita">
+  <meta property="og:image" content="{{ base_url }}/static/compartir.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ base_url }}{{ request.path }}">
+  <meta name="theme-color" content="#f4ecda">
+  <script type="application/ld+json" nonce="{{ nonce }}">{{ {'@context':'https://schema.org','@type':'WebPage','name':title,'url':base_url+request.path,'inLanguage':'es-MX','isPartOf':{'@type':'WebSite','name':'Por la Sombrita','url':base_url}}|tojson }}</script>
+</head>
+<body>
+  <a class="salto" href="#contenido">Saltar al contenido</a>
+  <header class="cabecera"><div class="contenedor barra">
+    <a class="marca" href="/"><span class="sol" aria-hidden="true">✳</span><span>POR LA<br>SOMBRITA</span></a>
+    <nav aria-label="Navegación principal">
+      <a href="/#documentos">Documentos</a>
+      <a href="/archivo-proton">Archivo Proton</a>
+      <a href="/discusiones">Discusiones</a>
+      <a href="/revision">Revisión</a>
+      <a href="/miembros">Comunidad</a>
+      <a class="nav-participa" href="/cuenta">{{ me.name if me else 'Entrar' }}</a>
+    </nav>
+  </div></header>
+  <div class="prototipo"><div class="contenedor">PROTOTIPO COMUNITARIO <span>Lectura pública · participación con cuenta · decisiones con historial</span></div></div>
+  {% if me and me.must_change %}<div class="aviso contenedor">Tu contraseña es provisional. <a href="/cuenta">Cámbiala para comenzar a participar.</a></div>{% endif %}
+  <main id="contenido">{% block content %}{% endblock %}</main>
+  <footer class="pie"><div class="contenedor">
+    <div class="pie-superior"><a class="marca" href="/"><span class="sol" aria-hidden="true">✳</span><span>POR LA<br>SOMBRITA</span></a><p>Conocimiento ciudadano.<br>Una ciudad más caminable.</p><a href="/participa">Participación y privacidad ↗</a></div>
+    <div class="pie-inferior"><span>Monterrey, Nuevo León · comunidad surgida en LABNL</span><a href="/archivo-proton">Archivo público</a><a href="/discusiones?estado=history">Historial de discusiones</a><a href="/fuentes.html">Fuentes</a><a href="https://github.com/luismario-zg/por-la-sombrita-plataforma">Código público</a>{% if me and me.role=='owner' %}<a href="/administracion">Administrar permisos</a>{% endif %}</div>
+  </div></footer>
+  <div id="notificacion" role="status" aria-live="polite"></div>
+</body>
+</html>

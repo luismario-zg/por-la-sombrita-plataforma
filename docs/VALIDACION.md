@@ -16,3 +16,11 @@ Estas comprobaciones no equivalen a una auditoría completa ni a validación de 
 ## Verificación después de publicar
 
 El prototipo quedó activo en https://plsmty.bespokem.mx/. Se verificaron las rutas públicas, rechazo de administración anónima y rutas de datos inexistentes. Se comprobó el ingreso real del administrador general con su contraseña provisional y el cierre de sesión; no se cambiaron claves ni se crearon mensajes de ensayo en producción. Las nueve cuentas conservan cambio de clave obligatorio. La CI de GitHub terminó correctamente.
+
+## Archivo público de Proton
+
+Se añadieron pruebas para el índice allowlisted, exclusión por ruta y contenido sensible, documentos nativos, cambios de versión y desactivación sin borrado. El conjunto completo quedó en 18 pruebas automatizadas.
+
+En una base temporal se indexó el espejo real: 53 carpetas contando la raíz, 236 archivos descargables y 10 documentos nativos de Proton. Se excluyó un único archivo oculto; la carpeta de promotores nunca entró en el conjunto permitido. Se probaron navegación, búsqueda, previsualización de texto, acceso convencional a un documento nativo, conversación sobre carpeta, aparición en el historial global y cierre sin edición del archivo.
+
+Chromium no encontró errores de ejecución ni desbordamiento a 390 px en la raíz del archivo, una carpeta, un archivo textual, un documento nativo y una discusión. axe-core no reportó incidencias WCAG A/AA después de hacer enfocable la región desplazable de texto. La auditoría de dependencias volvió a reportar que no conoce vulnerabilidades en las versiones fijadas.

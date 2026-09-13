@@ -14,6 +14,8 @@ No publicar vulnerabilidades con contraseñas, tokens, base de datos ni informac
 - Datos, sesiones, respaldos y credenciales fuera del código público; directorio privado 0700 y base/entrega de contraseñas 0600.
 - Conservación de mensajes, anclas originales, versiones y eventos administrativos; sin borrado destructivo en la interfaz del prototipo.
 - IA solo por solicitud de un revisor autorizado, consumidor único y modelo fijado. Herramientas de shell, aplicaciones, MCP configurado, navegador, plugins y multiagente deshabilitados; sandbox de solo lectura, carpeta temporal, timeout y salida estructurada validada. Los comentarios son datos no confiables, no instrucciones.
+- El archivo de Proton usa una raíz allowlisted y exclusión previa por ruta, tipo y patrones sensibles. La aplicación no enumera `/my-files`, no indexa carpetas de promotores ni expone rutas internas del servidor.
+- Las descargas vuelven a resolver el archivo dentro del espejo, rechazan enlaces simbólicos y no renderizan HTML o SVG arbitrario en el origen autenticado. Las vistas permitidas reciben una política de contenido aislada.
 
 ## Límites explícitos
 

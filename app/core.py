@@ -8,6 +8,15 @@ from flask import current_app, g, abort, request
 
 ROLES={'owner':'Administrador general','admin':'Administrador','reviewer':'Revisor','member':'Participante','reader':'Solo lectura'}
 STATES={'open':'Abierta','closing':'Cierre propuesto','archived':'Archivada'}
+THREAD_SELECT='''SELECT t.*, u.name AS author_name, d.title AS base_document_title,
+CASE WHEN t.target_type='drive' THEN di.name ELSE d.title END AS document_title,
+CASE WHEN t.target_type='drive' THEN di.version ELSE d.version END AS current_version,
+CASE WHEN t.target_type='drive' THEN di.kind ELSE 'document' END AS target_kind,
+CASE WHEN t.target_type='drive' THEN di.path ELSE '' END AS resource_path,
+CASE WHEN t.target_type='drive' THEN di.active ELSE 1 END AS resource_active,
+CASE WHEN t.target_type='drive' THEN '/archivo-proton/' || di.id ELSE '/' || t.document || '.html?hilo=' || t.id || '#' || t.section END AS target_url
+FROM threads t JOIN users u ON u.id=t.author JOIN documents d ON d.slug=t.document
+LEFT JOIN drive_items di ON di.id=t.drive_item_id'''
 
 def now(): return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
@@ -22,7 +31,18 @@ def db():
 
 def init_db(path):
     Path(path).parent.mkdir(parents=True,exist_ok=True,mode=0o700)
-    with connect(path) as c:c.executescript((Path(__file__).parent/'schema.sql').read_text())
+    with connect(path) as c:
+        c.executescript((Path(__file__).parent/'schema.sql').read_text())
+        # Migraciones aditivas para instalaciones creadas por versiones anteriores.
+        document_columns={r['name'] for r in c.execute('PRAGMA table_info(documents)')}
+        if 'hidden' not in document_columns:
+            c.execute('ALTER TABLE documents ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0')
+        thread_columns={r['name'] for r in c.execute('PRAGMA table_info(threads)')}
+        if 'target_type' not in thread_columns:
+            c.execute("ALTER TABLE threads ADD COLUMN target_type TEXT NOT NULL DEFAULT 'document'")
+        if 'drive_item_id' not in thread_columns:
+            c.execute('ALTER TABLE threads ADD COLUMN drive_item_id INTEGER REFERENCES drive_items(id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_threads_drive ON threads(drive_item_id,id)')
     Path(path).chmod(0o600)
 
 def user():
@@ -88,11 +108,20 @@ def event(c,actor,kind,detail,thread=None):
     c.execute('INSERT INTO events(thread_id,actor,kind,detail,created) VALUES(?,?,?,?,?)',(thread,actor,kind,detail,now()))
 
 def thread_data(ident):
-    t=db().execute('SELECT t.*,u.name AS author_name,d.title AS document_title,d.version AS current_version FROM threads t JOIN users u ON u.id=t.author JOIN documents d ON d.slug=t.document WHERE t.id=?',(ident,)).fetchone()
+    t=db().execute(THREAD_SELECT+' WHERE t.id=?',(ident,)).fetchone()
     if not t:abort(404)
     comments=db().execute('SELECT c.*,u.name FROM comments c JOIN users u ON u.id=c.author WHERE c.thread_id=? ORDER BY c.id',(ident,)).fetchall()
     review=db().execute('SELECT r.*,u.name FROM reviews r JOIN users u ON u.id=r.author WHERE thread_id=? ORDER BY r.id DESC LIMIT 1',(ident,)).fetchone()
     return t,comments,review
+
+def drive_snapshot(item):
+    kind={'folder':'Carpeta','file':'Archivo','native':'Documento nativo de Proton'}[item['kind']]
+    state='Disponible en el archivo público' if item['active'] else 'Ya no aparece en el archivo público actual'
+    details=[f'Tipo: {kind}',f'Ruta: {item["path"] or "Raíz de Por La Sombrita MTY General"}',f'Estado: {state}',f'Versión indexada: {item["version"]}']
+    if item['media_type']:details.append(f'Formato: {item["media_type"]}')
+    if item['size']:details.append(f'Tamaño: {item["size"]} bytes')
+    if item['mtime']:details.append(f'Última modificación informada por Proton: {item["mtime"]}')
+    return '\n'.join(details)
 
 def short_sentence(text,maxlen=180):
     text=re.sub(r'\s+',' ',text).strip()

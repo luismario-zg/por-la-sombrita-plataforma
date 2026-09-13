@@ -16,6 +16,8 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Proponer cierre y archivar con resumen del consenso, con edición vinculada o sin cambios. Reabrir con motivo, conservando cierres y fichas anteriores.
 - Editar documentos con control de versión y motivo; marcar oficial solo al registrar la referencia de aprobación.
 - Administrar permisos y accesos; registrar membresía oficial de forma independiente.
+- Navegar en modo público y de solo lectura todas las carpetas y archivos del espacio compartido `Por La Sombrita MTY General` en Proton Drive.
+- Abrir una discusión sobre una carpeta o un archivo completo desde cualquier nivel del árbol. Los documentos nativos que no se pueden descargar muestran su ruta y el acceso convencional a Proton.
 
 No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El administrador general inicial es Luis Mario; las otras ocho cuentas iniciales son participantes. Las credenciales se generan localmente y nunca están incluidas en este repositorio.
 
@@ -47,8 +49,17 @@ Nunca desactivar cookies Secure en el sitio publicado. `inicializar.py` es idemp
 | `PLS_BASE_URL` | Origen exacto para canónicas y validación CSRF |
 | `PLS_AI_ENABLED` | `1` habilita solicitar fichas al consumidor dedicado; `0` conserva el modo manual |
 | `PLS_CODEX_BIN` | Ruta al binario de Codex CLI en el servidor confiable |
+| `PLS_PROTON_MIRROR` | Espejo local de la carpeta pública; por defecto apunta a `Por La Sombrita MTY General` |
 
 Con IA habilitada, ejecutar además `.venv/bin/python scripts/worker.py` como servicio dedicado. Solo debe existir un consumidor de la cola. No se exponen comandos, modelos arbitrarios ni credenciales a participantes.
+
+Para actualizar el catálogo público después de sincronizar el espejo:
+
+```bash
+PLS_DATA_DIR=/ruta/privada .venv/bin/python scripts/indexar_proton.py
+```
+
+El indexador solo acepta elementos bajo `Por La Sombrita MTY General`. Excluye rutas privadas, accesos, contraseñas, credenciales, tokens, archivos ocultos y formatos reservados; también examina archivos de texto pequeños para detectar patrones sensibles. Nunca publica la carpeta de promotores. Los elementos retirados se desactivan sin borrar sus conversaciones.
 
 ## Datos y código público
 

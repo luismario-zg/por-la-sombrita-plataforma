@@ -10,12 +10,16 @@ CONTENT='<h2 id="sombra">Una sección</h2><p>La revisión será semanal.</p>'
 
 @pytest.fixture
 def app(tmp_path):
-    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True})
+    mirror=tmp_path/'mirror';mirror.mkdir();(mirror/'guia.txt').write_text('Contenido público de prueba.')
+    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror)})
     with connect(a.config['DATABASE']) as c:
         for name,role in [('owner','owner'),('member','member'),('reviewer','reviewer'),('reader','reader'),('temporary','member')]:
             c.execute('INSERT INTO users(username,name,password_hash,role,must_change,created) VALUES(?,?,?,?,?,?)',(name,name,generate_password_hash(PASS),role,int(name=='temporary'),now()))
         c.execute('INSERT INTO documents(slug,title,version,html,updated) VALUES(?,?,1,?,?)',('plan','Plan',CONTENT,now()))
         c.execute('INSERT INTO revisions(document,version,html,status,reason,created) VALUES(?,1,?,?,?,?)',('plan',CONTENT,'proposal','Inicial',now()))
+        c.execute("INSERT INTO documents(slug,title,version,html,updated,hidden) VALUES('archivo-proton','Archivo Proton',1,'<h2 id=\"resource\">Recurso</h2>',?,1)",(now(),))
+        c.execute("INSERT INTO drive_items(path,parent_path,name,kind,source_revision,version,active,indexed) VALUES('','','Por La Sombrita MTY General','folder','raiz',1,1,?)",(now(),))
+        c.execute("INSERT INTO drive_items(path,parent_path,name,kind,media_type,size,local_rel,source_revision,version,active,indexed) VALUES('guia.txt','','guia.txt','file','text/plain',28,'guia.txt','r1',1,1,?)",(now(),))
     return a
 
 def client(app,name=None):
@@ -45,11 +49,13 @@ def approve(app,c,tid=1):
 
 def test_public_read_and_no_anonymous_mutation(app):
     c=client(app)
-    for url in ['/','/plan.html','/miembros','/revision','/discusiones','/discusiones?estado=history','/documentos/plan/versiones','/sitemap.xml']:assert c.get(url).status_code==200
+    for url in ['/','/plan.html','/archivo-proton','/archivo-proton/1','/archivo-proton/2','/miembros','/revision','/discusiones','/discusiones?estado=history','/documentos/plan/versiones','/sitemap.xml']:assert c.get(url).status_code==200
     assert create_thread(c).status_code==401
     assert c.get('/administracion').status_code==401
     assert c.get('/.env').status_code==404
     assert c.get('/api/users').status_code==404
+    assert c.get('/archivo-proton.html').status_code==404
+    assert c.get('/editar/archivo-proton').status_code in [401,404]
 
 def test_csrf_and_origin(app):
     c=client(app,'owner');s=c.get('/api/session').json
@@ -148,3 +154,29 @@ def test_reset_password_revokes_sessions_and_not_public(app):
     assert r.json['password'] not in c.get('/miembros').text
     with connect(app.config['DATABASE']) as db:
         for e in db.execute('SELECT detail FROM events'):assert r.json['password'] not in e['detail']
+
+def test_drive_file_is_read_only_and_discussable(app):
+    public=client(app)
+    page=public.get('/archivo-proton/2');assert 'Contenido público de prueba.' in page.text
+    download=public.get('/archivo-proton/contenido/2');assert download.status_code==200
+    assert download.headers['Content-Disposition'].startswith('attachment;')
+    assert public.post('/api/archive/threads',json={}).status_code==403
+    member=client(app,'member')
+    response=post(member,'/api/archive/threads',{'drive_item_id':2,'title':'Conversar sobre la guía','body':'Propongo revisar su vigencia.'})
+    assert response.status_code==201,response.json
+    thread=member.get('/discusiones/1');assert 'Archivo: guia.txt' in thread.text and 'Propongo revisar su vigencia.' in thread.text
+    assert 'Editar el documento a partir' not in thread.text
+    assert 'Conversar sobre la guía' in public.get('/archivo-proton/2').text
+    assert 'Conversar sobre la guía' in public.get('/discusiones').text
+
+def test_drive_thread_stales_when_index_version_changes(app):
+    owner=client(app,'owner');post(owner,'/api/archive/threads',{'drive_item_id':2,'title':'Vigencia','body':'¿Sigue vigente?'})
+    assert save_review(owner).status_code==200;assert approve(app,owner).status_code==200
+    with connect(app.config['DATABASE']) as database:database.execute("UPDATE drive_items SET version=2,source_revision='r2' WHERE id=2")
+    assert 'Desactualizada' in owner.get('/discusiones/1').text
+    assert save_review(owner,version=1).status_code==409
+    assert save_review(owner,version=2).status_code==200
+    assert approve(app,owner).status_code==200
+    post(owner,'/api/threads/1/state',{'action':'propose_close','summary':'Cierre propuesto.'})
+    assert post(owner,'/api/threads/1/state',{'action':'archive','summary':'Se acordó conservar el archivo.','outcome':'edited','revision_id':1,'consensus_confirmed':True}).status_code==400
+    assert post(owner,'/api/threads/1/state',{'action':'archive','summary':'Se acordó conservar el archivo.','outcome':'unchanged','consensus_confirmed':True}).status_code==200

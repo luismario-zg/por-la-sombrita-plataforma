@@ -3,7 +3,7 @@
 import json,os,sys,time
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from app.core import connect, now, sections, event
+from app.core import connect, now, sections, event, drive_snapshot
 from app.ai import summarize, SummaryError
 
 path=Path(os.environ.get('PLS_DATA_DIR',str(Path.home()/'.local/share/pls-plataforma')))/'plataforma.sqlite3'
@@ -22,9 +22,21 @@ def process_one():
         base_review=c.execute('SELECT COALESCE(MAX(id),0) FROM reviews WHERE thread_id=?',(t['id'],)).fetchone()[0]
         comments=[dict(x) for x in c.execute('SELECT c.id,u.name AS author,c.body,c.created FROM comments c JOIN users u ON u.id=c.author WHERE thread_id=? ORDER BY c.id',(t['id'],))]
         section=next((s for s in sections(doc['html']) if s['id']==t['section']),None)
+        current_version=doc['version']
+        current_section=section['text'] if section else 'La sección original ya no existe; revisar versiones.'
+        document_name=doc['title']
+        document_status=doc['status']
+        if t['target_type']=='drive':
+            item=c.execute('SELECT * FROM drive_items WHERE id=?',(t['drive_item_id'],)).fetchone()
+            if not item:
+                c.execute("UPDATE ai_jobs SET state='failed',error=?,finished=? WHERE id=?",('El elemento del archivo ya no tiene una ficha disponible.',now(),job['id']))
+                return True
+            current_version=item['version'];current_section=drive_snapshot(item)
+            document_name=('Carpeta' if item['kind']=='folder' else 'Archivo')+': '+item['name']
+            document_status='público, solo lectura' if item['active'] else 'retirado del índice público'
         bases=c.execute("SELECT html FROM documents WHERE slug='bases'").fetchone()
         context='\n'.join(s['text'] for s in sections(bases['html']))[:12000] if bases else ''
-        payload={'project_context':context,'title':t['title'],'document':doc['title'],'document_status':doc['status'],'original_version':t['version'],'current_version':doc['version'],'section_title':t['section_title'],'original_section':t['section_snapshot'],'selected_quote':t['quote'],'current_section':section['text'] if section else 'La sección original ya no existe; revisar versiones.','comments':comments}
+        payload={'project_context':context,'title':t['title'],'document':document_name,'document_status':document_status,'original_version':t['version'],'current_version':current_version,'section_title':t['section_title'],'original_section':t['section_snapshot'],'selected_quote':t['quote'],'current_section':current_section,'comments':comments}
     try:
         result=summarize(payload)
         with connect(path) as c:
@@ -32,7 +44,7 @@ def process_one():
             live=c.execute('SELECT state FROM threads WHERE id=?',(t['id'],)).fetchone()
             if c.execute('SELECT COALESCE(MAX(id),0) FROM reviews WHERE thread_id=?',(t['id'],)).fetchone()[0]!=base_review:raise SummaryError('La ficha cambió durante la generación. Se conservó la revisión más reciente.')
             if live['state']=='archived':raise SummaryError('El hilo fue archivado durante la generación. No se reemplazó su ficha.')
-            c.execute('INSERT INTO reviews(thread_id,payload,source,comment_count,document_version,author,created) VALUES(?,?,?,?,?,?,?)',(t['id'],json.dumps(result,ensure_ascii=False),'luna-high',len(comments),doc['version'],job['actor'],now()))
+            c.execute('INSERT INTO reviews(thread_id,payload,source,comment_count,document_version,author,created) VALUES(?,?,?,?,?,?,?)',(t['id'],json.dumps(result,ensure_ascii=False),'luna-high',len(comments),current_version,job['actor'],now()))
             # El tema visible conserva la última formulación humana hasta que se revise el borrador.
             event(c,job['actor'],'ai_draft','Se generó un borrador de ficha con Luna high; requiere revisión humana.',t['id'])
             c.execute("UPDATE ai_jobs SET state='done',finished=? WHERE id=?",(now(),job['id']))

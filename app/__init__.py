@@ -1,7 +1,7 @@
 """Plataforma pública de documentación y deliberación de Por la Sombrita."""
 import hashlib, hmac, json, os, secrets, time
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, g, abort, redirect, make_response, send_from_directory
+from flask import Flask, render_template, request, jsonify, g, abort, redirect, make_response, send_from_directory, send_file
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 from .core import *
@@ -9,7 +9,14 @@ from .core import *
 def create_app(config=None):
     app=Flask(__name__)
     data=Path(os.environ.get('PLS_DATA_DIR',str(Path.home()/'.local/share/pls-plataforma')))
-    app.config.update(DATABASE=str(data/'plataforma.sqlite3'),BASE_URL=os.environ.get('PLS_BASE_URL','https://plsmty.bespokem.mx'),COOKIE_NAME='__Host-pls',COOKIE_SECURE=True,MAX_CONTENT_LENGTH=262144,AI_ENABLED=os.environ.get('PLS_AI_ENABLED','0')=='1')
+    app.config.update(
+        DATABASE=str(data/'plataforma.sqlite3'),
+        BASE_URL=os.environ.get('PLS_BASE_URL','https://plsmty.bespokem.mx'),
+        COOKIE_NAME='__Host-pls',COOKIE_SECURE=True,MAX_CONTENT_LENGTH=262144,
+        AI_ENABLED=os.environ.get('PLS_AI_ENABLED','0')=='1',
+        PROTON_MIRROR=os.environ.get('PLS_PROTON_MIRROR','/home/claude/projects/pls_proton/espejo/Por La Sombrita MTY General'),
+        PROTON_PUBLIC_URL='https://drive.proton.me/urls/YDN71HHPW8#exZbmfOdOazj',
+    )
     if config:app.config.update(config)
     init_db(app.config['DATABASE'])
     app.config['DUMMY_HASH']=generate_password_hash(secrets.token_urlsafe(16))
@@ -35,7 +42,12 @@ def create_app(config=None):
         response.headers['X-Content-Type-Options']='nosniff';response.headers['X-Frame-Options']='DENY'
         response.headers['Referrer-Policy']='strict-origin-when-cross-origin'
         response.headers['Cache-Control']='no-store'
-        response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        if request.endpoint=='drive_content':
+            response.headers['Content-Security-Policy']="sandbox; default-src 'none'; frame-ancestors 'self'"
+            response.headers['X-Frame-Options']='SAMEORIGIN'
+            response.headers['X-Robots-Tag']='noindex, nofollow'
+        else:
+            response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
         if request.path.startswith('/api/') or request.path in ['/cuenta','/administracion']:response.headers['X-Robots-Tag']='noindex, nofollow'
         return response
 
@@ -46,6 +58,13 @@ def create_app(config=None):
 
     @app.context_processor
     def context():return dict(me=user(),roles=ROLES,states=STATES,base_url=app.config['BASE_URL'],nonce=g.nonce)
+
+    @app.template_filter('filesize')
+    def filesize(value):
+        size=float(value or 0)
+        for unit in ['B','KB','MB','GB']:
+            if size<1024 or unit=='GB':return f'{size:.0f} {unit}' if unit=='B' else f'{size:.1f} {unit}'
+            size/=1024
 
     def new_session(uid=None):
         token=secrets.token_urlsafe(32);csrf=secrets.token_urlsafe(32)
@@ -65,8 +84,8 @@ def create_app(config=None):
 
     @app.get('/')
     def home():
-        docs=db().execute('SELECT slug,title,intro,status,version FROM documents ORDER BY rowid').fetchall()
-        threads=db().execute('SELECT t.*,u.name AS author_name FROM threads t JOIN users u ON u.id=t.author ORDER BY t.updated DESC,t.id DESC LIMIT 4').fetchall()
+        docs=db().execute('SELECT slug,title,intro,status,version FROM documents WHERE hidden=0 ORDER BY rowid').fetchall()
+        threads=db().execute(THREAD_SELECT+' ORDER BY t.updated DESC,t.id DESC LIMIT 4').fetchall()
         return render_template('home.html',title='Una ciudad más caminable',docs=docs,threads=threads)
 
     @app.get('/<slug>.html')
@@ -75,7 +94,7 @@ def create_app(config=None):
         if slug=='participa':return redirect('/participa')
         if slug=='404':abort(404)
         doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
-        if not doc:abort(404)
+        if not doc or doc['hidden']:abort(404)
         groups=db().execute('SELECT section,COUNT(*) AS total FROM threads WHERE document=? GROUP BY section',(slug,)).fetchall()
         counts={r['section']:r['total'] for r in groups}
         annotations=[dict(r) for r in db().execute("SELECT id,section,quote,prefix,suffix,title,state,version FROM threads WHERE document=? ORDER BY id",(slug,))]
@@ -84,26 +103,27 @@ def create_app(config=None):
     @app.get('/documentos/<slug>/versiones')
     def versions(slug):
         doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
-        if not doc:abort(404)
+        if not doc or doc['hidden']:abort(404)
         revs=db().execute('SELECT r.*,u.name FROM revisions r LEFT JOIN users u ON u.id=r.author WHERE document=? ORDER BY version DESC',(slug,)).fetchall()
         return render_template('versions.html',title='Historial de '+doc['title'],doc=doc,revisions=revs)
 
     @app.get('/documentos/<slug>/versiones/<int:version>')
     def revision(slug,version):
         r=db().execute('SELECT r.*,d.title,u.name FROM revisions r JOIN documents d ON d.slug=r.document LEFT JOIN users u ON u.id=r.author WHERE document=? AND r.version=?',(slug,version)).fetchone()
-        if not r:abort(404)
+        if not r or r['document']=='archivo-proton':abort(404)
         return render_template('revision.html',title=f"Versión {version} · {r['title']}",revision=r)
 
     @app.get('/discusiones')
     def discussions():
-        state=request.args.get('estado','active');doc=request.args.get('documento','');section=request.args.get('seccion','')
+        state=request.args.get('estado','active');doc=request.args.get('documento','');section=request.args.get('seccion','');drive_id=request.args.get('archivo','')
         conditions=[];params=[]
         if state=='history':conditions.append("(t.state='archived' OR EXISTS(SELECT 1 FROM events e WHERE e.thread_id=t.id AND e.kind='archived'))")
         elif state=='all':pass
         else:conditions.append("t.state<>'archived'")
         if doc:conditions.append('t.document=?');params.append(doc)
         if section:conditions.append('t.section=?');params.append(section)
-        q='SELECT t.*,u.name AS author_name,d.title AS document_title FROM threads t JOIN users u ON u.id=t.author JOIN documents d ON d.slug=t.document'
+        if drive_id.isdigit():conditions.append('t.drive_item_id=?');params.append(int(drive_id))
+        q=THREAD_SELECT
         if conditions:q+=' WHERE '+' AND '.join(conditions)
         q+=' ORDER BY t.updated DESC,t.id DESC'
         return render_template('threads.html',title='Historial de discusiones' if state=='history' else 'Discusiones',threads=db().execute(q,params).fetchall(),state=state)
@@ -126,8 +146,80 @@ def create_app(config=None):
 
     @app.get('/revision')
     def review_queue():
-        threads=db().execute("SELECT t.*,u.name AS author_name,d.title AS document_title,(SELECT COUNT(*) FROM comments WHERE thread_id=t.id) AS comment_count FROM threads t JOIN users u ON u.id=t.author JOIN documents d ON d.slug=t.document WHERE t.state<>'archived' ORDER BY CASE WHEN t.state='closing' THEN 0 ELSE 1 END,t.updated DESC").fetchall()
+        query=THREAD_SELECT.replace('FROM threads',", (SELECT COUNT(*) FROM comments WHERE thread_id=t.id) AS comment_count FROM threads")
+        threads=db().execute(query+" WHERE t.state<>'archived' ORDER BY CASE WHEN t.state='closing' THEN 0 ELSE 1 END,t.updated DESC").fetchall()
         return render_template('review_queue.html',title='Mesa de revisión y aprobación',threads=threads)
+
+    def drive_row(ident):
+        row=db().execute('SELECT * FROM drive_items WHERE id=?',(ident,)).fetchone()
+        if not row:abort(404)
+        return row
+
+    def drive_breadcrumbs(item):
+        result=[];path=item['path']
+        while path is not None:
+            row=db().execute('SELECT id,name,path FROM drive_items WHERE path=?',(path,)).fetchone()
+            if not row:break
+            result.append(row)
+            path=None if row['path']=='' else ('/'.join(row['path'].split('/')[:-1]) if '/' in row['path'] else '')
+        return list(reversed(result))
+
+    def drive_file_path(item):
+        if item['kind']!='file' or not item['active'] or not item['local_rel']:return None
+        try:
+            root=Path(app.config['PROTON_MIRROR']).resolve(strict=True)
+            candidate=Path(app.config['PROTON_MIRROR'])/Path(item['local_rel'])
+            resolved=candidate.resolve(strict=True);resolved.relative_to(root)
+        except (OSError,ValueError):return None
+        return None if candidate.is_symlink() or not resolved.is_file() else resolved
+
+    @app.get('/archivo-proton')
+    def drive_library():
+        query=request.args.get('q','').strip()[:100]
+        root=db().execute("SELECT * FROM drive_items WHERE path='' AND active=1").fetchone()
+        results=[]
+        if query:
+            escaped=query.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')
+            results=db().execute("SELECT * FROM drive_items WHERE active=1 AND path<>'' AND (name LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\') ORDER BY kind='folder' DESC,path LIMIT 100",(f'%{escaped}%',f'%{escaped}%')).fetchall()
+        children=db().execute("SELECT * FROM drive_items WHERE active=1 AND parent_path='' ORDER BY kind<>'folder',name COLLATE NOCASE").fetchall() if root and not query else []
+        threads=db().execute(THREAD_SELECT+' WHERE t.drive_item_id=? ORDER BY t.updated DESC',(root['id'],)).fetchall() if root else []
+        return render_template('drive.html',title='Archivo público de Proton',item=root,children=children,crumbs=[root] if root else [],results=results,query=query,threads=threads,proton_url=app.config['PROTON_PUBLIC_URL'])
+
+    @app.get('/archivo-proton/<int:ident>')
+    def drive_item(ident):
+        item=drive_row(ident)
+        children=db().execute("SELECT * FROM drive_items WHERE active=1 AND parent_path=? ORDER BY kind<>'folder',name COLLATE NOCASE",(item['path'],)).fetchall() if item['kind']=='folder' and item['active'] else []
+        threads=db().execute(THREAD_SELECT+' WHERE t.drive_item_id=? ORDER BY t.updated DESC',(ident,)).fetchall()
+        preview=None;text_preview=None
+        if item['kind']=='file' and item['active']:
+            media=item['media_type'].split(';',1)[0].lower()
+            if media=='application/pdf':preview='pdf'
+            elif media in {'image/jpeg','image/png','image/gif','image/webp','image/avif'}:preview='image'
+            elif media in {'video/mp4','video/webm'}:preview='video'
+            elif media in {'audio/mpeg','audio/ogg','audio/wav','audio/webm'}:preview='audio'
+            elif item['size']<=300000 and (media.startswith('text/') or Path(item['name']).suffix.lower() in {'.md','.json','.xml','.csv','.py','.js','.css','.sh','.yml','.yaml'}):
+                path=drive_file_path(item)
+                if path:text_preview=path.read_text(encoding='utf-8',errors='replace')
+        return render_template('drive.html',title=item['name'],item=item,children=children,crumbs=drive_breadcrumbs(item),results=[],query='',threads=threads,preview=preview,text_preview=text_preview,proton_url=app.config['PROTON_PUBLIC_URL'])
+
+    @app.get('/archivo-proton/contenido/<int:ident>')
+    def drive_content(ident):
+        item=drive_row(ident);path=drive_file_path(item)
+        if not path:abort(404)
+        media=item['media_type'].split(';',1)[0].lower()
+        inline=request.args.get('vista')=='1' and media in {'application/pdf','image/jpeg','image/png','image/gif','image/webp','image/avif','video/mp4','video/webm','audio/mpeg','audio/ogg','audio/wav','audio/webm'}
+        return send_file(path,mimetype=media or 'application/octet-stream',as_attachment=not inline,download_name=item['name'],conditional=True,max_age=0)
+
+    @app.post('/api/archive/threads')
+    def new_drive_thread():
+        u=require('owner','admin','reviewer','member');data=body();limited('thread:'+str(u['id']),20,3600)
+        item_id=number(data,'drive_item_id');title=field(data,'title',160);message=field(data,'body',10000)
+        c=db();c.execute('BEGIN IMMEDIATE');item=c.execute('SELECT * FROM drive_items WHERE id=? AND active=1',(item_id,)).fetchone()
+        if not item:abort(404)
+        label=('Carpeta' if item['kind']=='folder' else 'Archivo')+': '+item['name'];snapshot=drive_snapshot(item);stamp=now()
+        cur=c.execute("INSERT INTO threads(document,version,section,section_title,section_snapshot,title,topic,author,created,updated,target_type,drive_item_id) VALUES('archivo-proton',?,'resource',?,?,?,?,?,?,?,'drive',?)",(item['version'],label,snapshot,title,short_sentence(message),u['id'],stamp,stamp,item_id));tid=cur.lastrowid
+        c.execute('INSERT INTO comments(thread_id,author,body,created) VALUES(?,?,?,?)',(tid,u['id'],message,stamp));event(c,u['id'],'opened','Se inició una discusión sobre un elemento del archivo público de Proton.',tid);c.commit()
+        return jsonify(id=tid),201
 
     @app.get('/miembros')
     def members():
@@ -247,6 +339,7 @@ def create_app(config=None):
             if not r or not r['approved'] or r['comment_count']!=len(comments) or r['document_version']!=t['current_version']:abort(409,description='Revisa y aprueba una ficha vigente antes de archivar.')
             outcome=field(data,'outcome',30);rid=None
             if outcome not in ['edited','unchanged']:abort(400,description='Indica si terminó con edición o sin cambios.')
+            if t['target_type']=='drive' and outcome!='unchanged':abort(400,description='El archivo de Proton es de solo lectura; registra el cierre sin una edición vinculada.')
             if outcome=='edited':
                 rid=number(data,'revision_id');rev=c.execute('SELECT * FROM revisions WHERE id=? AND document=? AND source_thread=?',(rid,t['document'],ident)).fetchone()
                 if not rev or rev['version']<=t['version']:abort(400,description='Vincula una edición real derivada de este hilo.')
@@ -258,7 +351,7 @@ def create_app(config=None):
     @app.get('/editar/<slug>')
     def editor(slug):
         require('owner','admin');doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
-        if not doc:abort(404)
+        if not doc or doc['hidden']:abort(404)
         return render_template('editor.html',title='Editar '+doc['title'],doc=doc,source_thread=request.args.get('hilo',''))
 
     @app.post('/api/documents/<slug>')
@@ -297,16 +390,16 @@ def create_app(config=None):
         return jsonify(password=provisional)
 
     @app.get('/robots.txt')
-    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
+    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
 
     @app.get('/sitemap.xml')
     def sitemap():
         from xml.sax.saxutils import escape
-        paths=['/','/discusiones','/revision','/miembros','/participa']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents')]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
+        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
         return app.response_class('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+escape(app.config['BASE_URL']+p)+'</loc></url>' for p in paths)+'</urlset>',mimetype='application/xml')
 
     @app.get('/llms.txt')
-    def llms():return app.response_class('# Por la Sombrita\n\nPrototipo de documentación y deliberación ciudadana. La lectura es pública. Cada documento indica si es propuesta u oficial y su referencia de aprobación. Los resúmenes IA son borradores; no inferir consenso ni membresía.\n\n- [Documentos]('+app.config['BASE_URL']+'/)\n- [Discusiones]('+app.config['BASE_URL']+'/discusiones)\n- [Historial]('+app.config['BASE_URL']+'/discusiones?estado=history)\n',mimetype='text/plain')
+    def llms():return app.response_class('# Por la Sombrita\n\nPrototipo de documentación y deliberación ciudadana. La lectura es pública. Cada documento indica si es propuesta u oficial y su referencia de aprobación. El archivo público de Proton es una biblioteca de solo lectura. Los resúmenes IA son borradores; no inferir consenso ni membresía.\n\n- [Documentos]('+app.config['BASE_URL']+'/)\n- [Archivo público de Proton]('+app.config['BASE_URL']+'/archivo-proton)\n- [Discusiones]('+app.config['BASE_URL']+'/discusiones)\n- [Historial]('+app.config['BASE_URL']+'/discusiones?estado=history)\n',mimetype='text/plain')
 
     @app.get('/assets/<path:filename>')
     def previous_assets(filename):
@@ -315,7 +408,7 @@ def create_app(config=None):
     @app.get('/descargas/<slug>.md')
     def download_text(slug):
         doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
-        if not doc:abort(404)
+        if not doc or doc['hidden']:abort(404)
         text='# '+doc['title']+'\n\nVersión '+str(doc['version'])+' · '+('Oficial' if doc['status']=='official' else 'Propuesta')+'\n\n'
         for sec in sections(doc['html']):text+='## '+sec['title']+'\n\n'+sec['text']+'\n\n'
         response=app.response_class(text,mimetype='text/markdown')
