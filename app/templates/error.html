@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<div class="contenedor seccion"><span class="eyebrow">{{ code }}</span><h1>VOLVAMOS<br>A LA RUTA.</h1><p>{{ message }}</p><a class="boton" href="/">Ir al inicio →</a>{% if code in [401,403] %}<a href="/cuenta">Entrar a mi cuenta</a>{% endif %}</div>{% endblock %}
