@@ -12,3 +12,7 @@
 - Revisión previa de archivos Git: sin base de datos, registros, accesos reales ni patrones conocidos de credenciales. Las contraseñas provisionales quedaron fuera del repositorio.
 
 Estas comprobaciones no equivalen a una auditoría completa ni a validación de la gobernanza de la comunidad. Las funciones futuras indicadas en ROADMAP.md no están implementadas.
+
+## Verificación después de publicar
+
+El prototipo quedó activo en https://plsmty.bespokem.mx/. Se verificaron las rutas públicas, rechazo de administración anónima y rutas de datos inexistentes. Se comprobó el ingreso real del administrador general con su contraseña provisional y el cierre de sesión; no se cambiaron claves ni se crearon mensajes de ensayo en producción. Las nueve cuentas conservan cambio de clave obligatorio. La CI de GitHub terminó correctamente.
