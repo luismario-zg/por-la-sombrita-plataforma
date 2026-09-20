@@ -39,6 +39,52 @@ Antes de sustituir el sitio estático, guardar fuera del repositorio la unidad p
 
 Un solo consumidor atiende la cola. Al reiniciarlo, los trabajos que quedaron en curso se marcan fallidos; un revisor puede solicitarlos de nuevo. No se ejecutan reintentos infinitos ni se omiten fallos. Los borradores no cambian estados de discusiones, permisos o documentos.
 
+## Ciclo de planeación del desarrollo
+
+`/planeacion-desarrollo-plataforma` presenta el informe completo y las preguntas
+estructuradas. La lectura y las respuestas guardadas son públicas; responder exige
+una cuenta participante con contraseña definitiva. Cada guardado añade una nueva
+respuesta, conserva autor y fecha y mueve el item a `answered`. No se sobrescribe el
+historial.
+
+Cuando una persona avise que terminó de responder, obtener el estado para revisión:
+
+```bash
+PLS_DATA_DIR=/home/claude/.local/share/pls-plataforma \
+  .venv/bin/python scripts/exportar_planeacion.py
+```
+
+Después de implementar o encontrar un bloqueo, actualizar el mismo registro:
+
+```bash
+PLS_DATA_DIR=/home/claude/.local/share/pls-plataforma \
+  .venv/bin/python scripts/actualizar_planeacion.py estado \
+  --item D01 --status implemented --nota "Implementación y verificación realizadas."
+
+PLS_DATA_DIR=/home/claude/.local/share/pls-plataforma \
+  .venv/bin/python scripts/actualizar_planeacion.py agregar \
+  --item P01 --titulo "Aclaración nueva" --pregunta "¿Qué falta definir?" \
+  --clasificacion "Pendientes surgidos durante la implementación"
+```
+
+Los estados posibles son `pending`, `answered`, `needs_clarification`,
+`in_progress`, `implemented`, `deferred` y `closed`. Un cambio de estado conserva
+un evento público. No marcar `implemented` antes de probar el comportamiento.
+
+El índice inicial vive en `contenido/planeacion-desarrollo.json`; sincronizarlo al
+arrancar actualiza títulos y preguntas, pero nunca estados o respuestas. Los nuevos
+pendientes creados durante la ejecución permanecen en la base aunque no estén en el
+índice inicial.
+
+La transcripción recibe un archivo terminado de máximo 12 MiB y lo mantiene en
+memoria. El servidor lo envía al proveedor configurado y devuelve únicamente texto;
+no guarda el audio. El navegador inserta ese texto como borrador editable y nunca lo
+envía automáticamente. Configurar `TRANSCRIBE_API_KEY` fuera del repositorio, junto
+con `TRANSCRIBE_BASE_URL`, `TRANSCRIBE_MODEL` y `TRANSCRIBE_LANGUAGES` cuando haga
+falta. La implementación usa `gpt-transcribe` por defecto.
+El límite queda por debajo de los 25 MiB admitidos y usa los formatos de archivo
+documentados en la [guía oficial de transcripción de OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text).
+
 ## Archivo público de Proton
 
 `scripts/indexar_proton.py` lee el manifiesto del espejo unidireccional existente. La raíz permitida está fijada a `Por La Sombrita MTY General`; cualquier otra carpeta de `/my-files`, incluida la de promotores, queda fuera incluso si cambia la navegación del sitio.

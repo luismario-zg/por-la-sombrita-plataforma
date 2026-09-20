@@ -5,10 +5,13 @@ from flask import Flask, render_template, request, jsonify, g, abort, redirect, 
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 from .core import *
+from .development import PLAN_STATUSES, MemoryUploadRequest, TranscriptionError, sync_plan_items, transcribe_audio
 
 def create_app(config=None):
     app=Flask(__name__)
+    app.request_class=MemoryUploadRequest
     data=Path(os.environ.get('PLS_DATA_DIR',str(Path.home()/'.local/share/pls-plataforma')))
+    languages=tuple(x.strip() for x in os.environ.get('TRANSCRIBE_LANGUAGES','es,en').split(',') if x.strip())
     app.config.update(
         DATABASE=str(data/'plataforma.sqlite3'),
         BASE_URL=os.environ.get('PLS_BASE_URL','https://plsmty.bespokem.mx'),
@@ -16,10 +19,17 @@ def create_app(config=None):
         AI_ENABLED=os.environ.get('PLS_AI_ENABLED','0')=='1',
         PROTON_MIRROR=os.environ.get('PLS_PROTON_MIRROR','/home/claude/projects/pls_proton/espejo/Por La Sombrita MTY General'),
         PROTON_PUBLIC_URL='https://drive.proton.me/urls/YDN71HHPW8#exZbmfOdOazj',
-        TEMP_REPORT=os.environ.get('PLS_TEMP_REPORT',str(data/'reporte-temporal.html')),
+        DEVELOPMENT_REPORT=os.environ.get('PLS_DEVELOPMENT_REPORT',str(data/'reporte-temporal.html')),
+        DEVELOPMENT_INDEX=os.environ.get('PLS_DEVELOPMENT_INDEX',str(Path(__file__).parents[1]/'contenido/planeacion-desarrollo.json')),
+        TRANSCRIBE_BASE_URL=os.environ.get('TRANSCRIBE_BASE_URL','https://api.openai.com/v1'),
+        TRANSCRIBE_API_KEY=os.environ.get('TRANSCRIBE_API_KEY',''),
+        TRANSCRIBE_MODEL=os.environ.get('TRANSCRIBE_MODEL','gpt-transcribe'),
+        TRANSCRIBE_LANGUAGES=languages,
+        TRANSCRIBE_MAX_BYTES=12*1024*1024,
     )
     if config:app.config.update(config)
     init_db(app.config['DATABASE'])
+    with connect(app.config['DATABASE']) as connection:sync_plan_items(connection,app.config['DEVELOPMENT_INDEX'],now())
     app.config['DUMMY_HASH']=generate_password_hash(secrets.token_urlsafe(16))
 
     @app.teardown_appcontext
@@ -30,11 +40,12 @@ def create_app(config=None):
     @app.before_request
     def protect():
         g.nonce=secrets.token_urlsafe(18)
+        if request.endpoint=='development_transcribe':request.max_content_length=app.config['TRANSCRIBE_MAX_BYTES']+65536
         if app.config['BASE_URL'].startswith('https://') and request.headers.get('X-Forwarded-Proto')=='http':
             return redirect(app.config['BASE_URL']+request.full_path.rstrip('?'),code=301)
         if request.method in {'POST','PUT','PATCH','DELETE'}:
             if request.headers.get('Origin')!=app.config['BASE_URL']:abort(403,description='Origen de solicitud no permitido.')
-            if not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
+            if request.endpoint!='development_transcribe' and not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
             user()
             if not g.session or not hmac.compare_digest(request.headers.get('X-CSRF-Token',''),g.session['csrf']):abort(403,description='La sesión de formulario expiró. Recarga la página.')
 
@@ -43,8 +54,10 @@ def create_app(config=None):
         response.headers['X-Content-Type-Options']='nosniff';response.headers['X-Frame-Options']='DENY'
         response.headers['Referrer-Policy']='strict-origin-when-cross-origin'
         response.headers['Cache-Control']='no-store'
-        if request.endpoint=='temporary_report':
-            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+        response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=()'
+        if request.endpoint=='development_report':
+            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'none'"
+            response.headers['X-Frame-Options']='SAMEORIGIN'
             response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         elif request.endpoint=='drive_content':
             response.headers['Content-Security-Policy']="sandbox; default-src 'none'; frame-ancestors 'self'"
@@ -52,6 +65,7 @@ def create_app(config=None):
             response.headers['X-Robots-Tag']='noindex, nofollow'
         else:
             response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        if request.endpoint=='development_plan':response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
         if request.path.startswith('/api/') or request.path in ['/cuenta','/administracion']:response.headers['X-Robots-Tag']='noindex, nofollow'
         return response
 
@@ -92,14 +106,36 @@ def create_app(config=None):
         threads=db().execute(THREAD_SELECT+' ORDER BY t.updated DESC,t.id DESC LIMIT 4').fetchall()
         return render_template('home.html',title='Una ciudad más caminable',docs=docs,threads=threads)
 
-    @app.get('/reporte-temporal')
-    def temporary_report():
-        path=Path(app.config['TEMP_REPORT'])
+    @app.get('/planeacion-desarrollo-plataforma')
+    def development_plan():
+        rows=[dict(row) for row in db().execute('SELECT * FROM development_items ORDER BY sort_order,key')]
+        responses={row['key']:[] for row in rows};events={row['key']:[] for row in rows}
+        for response in db().execute('''SELECT r.*,u.name AS author_name FROM development_responses r
+            JOIN users u ON u.id=r.author ORDER BY r.id'''):
+            if response['item_key'] in responses:responses[response['item_key']].append(dict(response))
+        for update in db().execute('''SELECT e.*,u.name AS actor_name FROM development_events e
+            LEFT JOIN users u ON u.id=e.actor ORDER BY e.id'''):
+            if update['item_key'] in events:events[update['item_key']].append(dict(update))
+        categories=[]
+        for row in rows:
+            group=next((x for x in categories if x['name']==row['classification']),None)
+            if not group:group={'name':row['classification'],'items':[]};categories.append(group)
+            row['responses']=responses[row['key']];row['events']=events[row['key']];group['items'].append(row)
+        counts={status:sum(1 for row in rows if row['status']==status) for status in PLAN_STATUSES}
+        return render_template('development_plan.html',title='Planeación de desarrollo de plataforma',categories=categories,
+            statuses=PLAN_STATUSES,counts=counts,total=len(rows),transcription_enabled=bool(app.config['TRANSCRIBE_API_KEY']))
+
+    @app.get('/planeacion-desarrollo-plataforma/informe')
+    def development_report():
+        path=Path(app.config['DEVELOPMENT_REPORT'])
         if not path.is_file():abort(404)
         return send_file(path,mimetype='text/html',conditional=True,max_age=0)
 
+    @app.get('/reporte-temporal')
+    def temporary_report():return redirect('/planeacion-desarrollo-plataforma',code=302)
+
     @app.get('/reporte_temporal')
-    def temporary_report_alias():return redirect('/reporte-temporal',code=302)
+    def temporary_report_alias():return redirect('/planeacion-desarrollo-plataforma',code=302)
 
     @app.get('/<slug>.html')
     def document(slug):
@@ -287,6 +323,26 @@ def create_app(config=None):
         c=db();c.execute('UPDATE users SET password_hash=?,must_change=0 WHERE id=?',(generate_password_hash(new),u['id']));c.execute('DELETE FROM sessions WHERE user_id=?',(u['id'],));c.commit()
         token,csrf=new_session(u['id']);return set_cookie(jsonify(ok=True,csrf=csrf),token)
 
+    @app.post('/api/development/items/<key>/responses')
+    def save_development_response(key):
+        u=require('owner','admin','reviewer','member');message=field(body(),'body',12000);limited('development-response:'+str(u['id']),60,3600)
+        c=db();c.execute('BEGIN IMMEDIATE');item=c.execute('SELECT * FROM development_items WHERE key=?',(key,)).fetchone()
+        if not item:abort(404,description='La pregunta de planeación no existe.')
+        stamp=now();cur=c.execute('INSERT INTO development_responses(item_key,author,body,created) VALUES(?,?,?,?)',(key,u['id'],message,stamp))
+        c.execute("UPDATE development_items SET status='answered',updated=? WHERE key=?",(stamp,key))
+        c.execute("INSERT INTO development_events(item_key,actor,kind,detail,created) VALUES(?,?,'response_saved','Se guardó una respuesta para revisión y ejecución.',?)",(key,u['id'],stamp));c.commit()
+        return jsonify(ok=True,id=cur.lastrowid,status='answered'),201
+
+    @app.post('/api/development/transcribe')
+    def development_transcribe():
+        u=require('owner','admin','reviewer','member');limited('development-transcribe:'+str(u['id']),30,3600)
+        audio=request.files.get('audio')
+        if not audio:abort(400,description="Falta el archivo de audio (campo 'audio').")
+        mimetype=(audio.mimetype or '').split(';',1)[0].lower();payload=audio.read(app.config['TRANSCRIBE_MAX_BYTES']+1)
+        try:text=transcribe_audio(payload,mimetype,app.config)
+        except TranscriptionError as error:abort(error.status,description=str(error))
+        return jsonify(text=text)
+
     @app.post('/api/threads')
     def new_thread():
         u=require('owner','admin','reviewer','member');data=body();limited('thread:'+str(u['id']),20,3600)
@@ -403,12 +459,12 @@ def create_app(config=None):
         return jsonify(password=provisional)
 
     @app.get('/robots.txt')
-    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
+    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /planeacion-desarrollo-plataforma/informe\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
 
     @app.get('/sitemap.xml')
     def sitemap():
         from xml.sax.saxutils import escape
-        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
+        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa','/planeacion-desarrollo-plataforma']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
         return app.response_class('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+escape(app.config['BASE_URL']+p)+'</loc></url>' for p in paths)+'</urlset>',mimetype='application/xml')
 
     @app.get('/llms.txt')

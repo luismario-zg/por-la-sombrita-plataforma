@@ -26,6 +26,7 @@
       <a href="/archivo-proton">Archivo Proton</a>
       <a href="/discusiones">Discusiones</a>
       <a href="/revision">Revisión</a>
+      <a href="/planeacion-desarrollo-plataforma">Planeación</a>
       <a href="/miembros">Comunidad</a>
       <a class="nav-participa" href="/cuenta">{{ me.name if me else 'Entrar' }}</a>
     </nav>
@@ -38,5 +39,6 @@
     <div class="pie-inferior"><span>Monterrey, Nuevo León · comunidad surgida en LABNL</span><a href="/archivo-proton">Archivo público</a><a href="/discusiones?estado=history">Historial de discusiones</a><a href="/fuentes.html">Fuentes</a><a href="https://github.com/luismario-zg/por-la-sombrita-plataforma">Código público</a>{% if me and me.role=='owner' %}<a href="/administracion">Administrar permisos</a>{% endif %}</div>
   </div></footer>
   <div id="notificacion" role="status" aria-live="polite"></div>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

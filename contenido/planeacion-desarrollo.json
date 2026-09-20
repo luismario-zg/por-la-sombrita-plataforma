@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "key": "D01",
+      "title": "Participación anónima",
+      "question": "¿Dónde puede comentar sin registro una persona y cuándo se vuelve pública su aportación?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A01; C-02/C-04; regla actual de autenticación."
+    },
+    {
+      "key": "D02",
+      "title": "Identidad, verificación y datos de participación",
+      "question": "¿Qué anonimato se ofrece y cómo convive con la verificación de cuentas de un mes y el archivo de comentarios?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A01; C-04 y ROADMAP actual."
+    },
+    {
+      "key": "D03",
+      "title": "Intención y alcance de las directrices",
+      "question": "¿Cómo se interpreta el espíritu de una directriz, quién aclara disputas y cómo se relaciona con estándares y reglas específicas?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A01, A14, A15; preguntas históricas sobre ratificación."
+    },
+    {
+      "key": "D04",
+      "title": "Bibliotecas de conocimiento e historia",
+      "question": "¿Qué nombres, alcance, fuentes y frecuencia de revisión tendrán las dos ramas de estado del arte y quién las sostendrá?",
+      "classification": "Contenidos, documentación y difusión",
+      "origin": "A02, A03; C-07."
+    },
+    {
+      "key": "D05",
+      "title": "Redacción humana y asistencia de IA",
+      "question": "¿Quién quiere reescribir, quién convoca, qué criterios de revisión se usarán y cómo se reconocerán las contribuciones?",
+      "classification": "Contenidos, documentación y difusión",
+      "origin": "A04, A05; C-12."
+    },
+    {
+      "key": "D06",
+      "title": "Decisión, beneficio y resolución de conflictos",
+      "question": "¿Quién participa, con qué reglas se decide y qué hacer cuando dos integrantes discrepan sobre una acción?",
+      "classification": "Organización, responsabilidades y toma de decisiones",
+      "origin": "A06, A07; D-TRI-02, P-004/P-005."
+    },
+    {
+      "key": "D07",
+      "title": "Autonomía editorial, alcance y saturación",
+      "question": "¿Qué importancia se dará al alcance algorítmico y qué evidencia justificaría cambiar la frecuencia o el formato?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A06, A07, A15."
+    },
+    {
+      "key": "D08",
+      "title": "Revisión y publicación sin dependencia de una persona",
+      "question": "¿Habrá comité, revisión por pares u otra vía; quién publica y qué sucede si nadie responde?",
+      "classification": "Organización, responsabilidades y toma de decisiones",
+      "origin": "A06, A07, A10, A14."
+    },
+    {
+      "key": "D09",
+      "title": "Autonomía para actuar y razones para detenerse",
+      "question": "¿Qué puede hacer una persona por iniciativa propia y qué exige revisión por representar a la comunidad o comprometer recursos?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A07, A12, A14."
+    },
+    {
+      "key": "D10",
+      "title": "Convivencia y formas de comunicación",
+      "question": "¿Dónde se alojará esta reflexión y quién la elaborará o facilitará?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A08; A06/A07."
+    },
+    {
+      "key": "D11",
+      "title": "Asistentes de texto y voz",
+      "question": "¿Qué preguntas responderán, con qué fuentes, modelo, presupuesto, privacidad y persona responsable?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "A09; C-05."
+    },
+    {
+      "key": "D12",
+      "title": "Plan comunitario, GitHub y revisores de código",
+      "question": "¿Qué sistema manda para el estado de tareas e issues, quién revisa contribuciones y cómo se publica un cambio?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "A09, A12; repositorio público existente."
+    },
+    {
+      "key": "D13",
+      "title": "Arte: archivo, destacada y seguimiento",
+      "question": "¿Dónde se conservará el arte además de Instagram, qué se considera relacionado y quién impulsa su publicación?",
+      "classification": "Contenidos, documentación y difusión",
+      "origin": "A10; A13/A14."
+    },
+    {
+      "key": "D14",
+      "title": "Dinámicas, actividades y primer caso",
+      "question": "¿Se usará “dinámicas” como nombre visible, qué abarca y cómo se valida el relato del 15 de septiembre?",
+      "classification": "Contenidos, documentación y difusión",
+      "origin": "A11; historia ciudadana de 2026."
+    },
+    {
+      "key": "D15",
+      "title": "Convocatorias: estados, fechas y reglas",
+      "question": "¿Cuáles serán las transiciones, qué hace activa a una convocatoria y cómo se representa la permanente?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "A11."
+    },
+    {
+      "key": "D16",
+      "title": "Tareas, interés, responsabilidades y especialidades",
+      "question": "¿Quién crea/prioriza/cierra tareas, cómo se acepta una responsabilidad y quién verifica requisitos profesionales?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "A12; C-09."
+    },
+    {
+      "key": "D17",
+      "title": "Recursos gráficos, licencias y réplica",
+      "question": "¿Qué assets pueden compartirse, bajo qué licencia y qué uso del nombre/logotipo implica afiliación?",
+      "classification": "Relación institucional, licencias y continuidad",
+      "origin": "A13; LICENSE actual del código."
+    },
+    {
+      "key": "D18",
+      "title": "Alcance de “estándares” y pertenencia",
+      "question": "¿Se exige alineación a publicaciones, actividades, proyectos o también a personas, y en qué canales?",
+      "classification": "Directrices y valores pendientes de discutir y votar",
+      "origin": "A14, A15; diferencia cuenta/membresía."
+    },
+    {
+      "key": "D19",
+      "title": "Dominio y alojamiento de LABNL",
+      "question": "¿Aceptaría LABNL proporcionar esos recursos y con qué titularidad, soporte, costo y autonomía para la comunidad?",
+      "classification": "Relación institucional, licencias y continuidad",
+      "origin": "A17, A18."
+    },
+    {
+      "key": "D20",
+      "title": "Control, custodia y salida del proveedor",
+      "question": "¿Quién representa a la comunidad como custodio y cómo recibe activos y accesos si cambia o desaparece el apoyo?",
+      "classification": "Relación institucional, licencias y continuidad",
+      "origin": "A17, A18; operación actual."
+    },
+    {
+      "key": "D21",
+      "title": "Modelo de distribución del software abierto",
+      "question": "¿Se replicará mediante instalaciones independientes, una plantilla/fork o un servicio para varias comunidades?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "A18; A13; repositorio público actual."
+    },
+    {
+      "key": "D22",
+      "title": "Pasajes de audio por confirmar",
+      "question": "¿Hay matices o contenido adicional en los intervalos que el reconocimiento automático no resolvió?",
+      "classification": "Verificación de información y aclaraciones",
+      "origin": "Control de señal/transcripción; A06 y A08."
+    },
+    {
+      "key": "D23",
+      "title": "Capacidad, responsables y calendario real",
+      "question": "¿Qué personas aceptan trabajo, cuánto tiempo pueden dedicar y cuál será el alcance del primer ciclo?",
+      "classification": "Organización, responsabilidades y toma de decisiones",
+      "origin": "Instrucción inicial sobre habilidades/disponibilidad; C-08/C-10."
+    },
+    {
+      "key": "D24",
+      "title": "Contenido nativo de Proton y fuentes vigentes",
+      "question": "¿Quién cotejará documentos nativos que no tienen contenido local y qué versión será canónica al incorporarlos?",
+      "classification": "Verificación de información y aclaraciones",
+      "origin": "Inventario previo: nueve documentos nativos pendientes; espejo y plataforma desfasados."
+    },
+    {
+      "key": "D25",
+      "title": "Playlist colectiva: enlace, custodia e instrucciones",
+      "question": "¿Cuál será la playlist colaborativa de Spotify, quién la administrará y quién redactará las instrucciones de uso?",
+      "classification": "Ideas de desarrollo y configuración de la plataforma",
+      "origin": "N01 · Solicitud escrita posterior del usuario; no procede de los 18 audios."
+    }
+  ]
+}

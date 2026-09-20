@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="seccion"><div class="contenedor planeacion-page">
+  <nav class="migas" aria-label="Ruta"><a href="/">Inicio</a><span>→</span><span>Planeación de desarrollo de plataforma</span></nav>
+  <span class="eyebrow">Espacio oficial de trabajo · estado vivo</span>
+  <h1>Planeación de desarrollo de plataforma</h1>
+  <p class="texto-grande">Aquí se revisan las mejoras propuestas, se guardan respuestas y se mantiene visible qué puede implementarse, qué necesita aclaración y qué ya quedó resuelto.</p>
+  <div class="plan-summary" aria-label="Resumen de la planeación">
+    <div><b>{{ total }}</b><span>preguntas registradas</span></div>
+    <div><b>{{ counts.pending + counts.needs_clarification }}</b><span>pendientes de respuesta</span></div>
+    <div><b>{{ counts.answered }}</b><span>con respuesta para revisar</span></div>
+    <div><b>{{ counts.in_progress + counts.implemented }}</b><span>en proceso o implementadas</span></div>
+  </div>
+  <div class="aviso plan-cycle"><strong>Cómo funciona este ciclo:</strong> responde una o varias preguntas y pulsa Guardar. La voz solo llena un borrador editable. Cuando hayas terminado, avisa a Codex; se leerán las respuestas guardadas, se ejecutará lo suficientemente definido y esta misma sección se actualizará con resultados y dudas restantes.</div>
+  <nav class="tabs" aria-label="Contenido de planeación">
+    <a href="#respuestas">Responder y revisar pendientes</a>
+    <a href="#informe-completo">Consultar el informe completo</a>
+  </nav>
+</div></section>
+
+<section class="seccion plan-answers" id="respuestas"><div class="contenedor">
+  <div class="seccion-titulo"><div><span class="eyebrow">Decisiones y aclaraciones</span><h2>Respuestas guardadas</h2></div><p>La lectura es pública. Para responder necesitas entrar con una cuenta participante. Cada guardado conserva autor, fecha e historial.</p></div>
+  {% if not categories %}<div class="empty">Todavía no se ha cargado el índice de preguntas del plan.</div>{% endif %}
+  {% for category in categories %}
+  <section class="plan-category" aria-labelledby="categoria-{{ loop.index }}">
+    <h3 id="categoria-{{ loop.index }}">{{ category.name }}</h3>
+    {% for item in category['items'] %}
+    <article class="plan-item" id="{{ item.key }}">
+      <div class="plan-item-head">
+        <div><span class="plan-key">{{ item.key }}</span><h4>{{ item.title }}</h4></div>
+        <span class="plan-status {{ item.status }}">{{ statuses[item.status] }}</span>
+      </div>
+      <p class="plan-question"><strong>Pregunta:</strong> {{ item.question }}</p>
+      <p class="metadata">Origen: {{ item.origin }} · Actualización: {{ item.updated }}</p>
+
+      {% if item.events %}
+      <details class="plan-updates"><summary>Seguimiento · {{ item.events|length }} registro{{ '' if item.events|length == 1 else 's' }}</summary>
+        <ol>{% for update in item.events|reverse %}<li><time datetime="{{ update.created }}">{{ update.created }}</time> · {{ update.actor_name or 'Actualización de implementación' }}<p>{{ update.detail }}</p></li>{% endfor %}</ol>
+      </details>
+      {% endif %}
+
+      {% if item.responses %}
+      <div class="plan-responses"><h5>Respuestas</h5>
+        {% for response in item.responses %}<article><div><strong>{{ response.author_name }}</strong> · <time datetime="{{ response.created }}">{{ response.created }}</time></div><p>{{ response.body }}</p></article>{% endfor %}
+      </div>
+      {% endif %}
+
+      {% if me and me.role in ['owner','admin','reviewer','member'] and not me.must_change %}
+      <form class="plan-response-form" data-api="/api/development/items/{{ item.key }}/responses">
+        <label for="respuesta-{{ item.key }}">{{ 'Agregar otra respuesta' if item.responses else 'Escribir una respuesta' }}
+          <textarea id="respuesta-{{ item.key }}" name="body" rows="5" maxlength="12000" required></textarea>
+        </label>
+        <div class="voice-row">
+          <button type="button" class="small-button voice-button" aria-label="Grabar una respuesta para {{ item.key }}">🎙️ Dictar</button>
+          <button type="button" class="small-button voice-cancel" hidden>Descartar</button>
+          <span class="voice-timer" hidden>0:00</span>
+          <span class="voice-status" role="status" aria-live="polite"></span>
+        </div>
+        {% if not transcription_enabled %}<p class="form-note">El dictado todavía no está configurado en el servidor. Puedes escribir y guardar tu respuesta.</p>{% else %}<p class="form-note">El audio se usa para transcribir y no se conserva. Revisa el borrador antes de guardarlo.</p>{% endif %}
+        <p class="form-error" role="alert"></p>
+        <button type="submit" class="boton">Guardar respuesta <span>→</span></button>
+      </form>
+      {% elif not me %}<p class="plan-login"><a href="/cuenta">Entra con tu cuenta para responder esta pregunta.</a></p>
+      {% elif me.must_change %}<p class="plan-login"><a href="/cuenta">Cambia tu contraseña provisional para responder.</a></p>
+      {% else %}<p class="form-note">Tu cuenta es de solo lectura.</p>{% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div></section>
+
+<section class="seccion plan-report" id="informe-completo"><div class="contenedor">
+  <div class="seccion-titulo"><div><span class="eyebrow">Contexto y trazabilidad</span><h2>Informe completo</h2></div><p>Incluye el plan de implementación, las fuentes, la clasificación de decisiones, los asuntos y las transcripciones originales.</p></div>
+  <p class="plan-report-link"><a class="small-button" href="/planeacion-desarrollo-plataforma/informe" target="_blank" rel="noopener">Abrir el informe en una pestaña nueva ↗</a></p>
+  <iframe class="plan-report-frame" src="/planeacion-desarrollo-plataforma/informe" title="Informe completo de planeación de desarrollo" loading="lazy"></iframe>
+</div></section>
+{% endblock %}
+{% block scripts %}<script defer src="{{ url_for('static',filename='development-plan.js') }}"></script>{% endblock %}

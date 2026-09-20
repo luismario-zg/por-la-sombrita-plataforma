@@ -1,5 +1,5 @@
 """Pruebas de autorización, integridad del historial y seguridad del prototipo."""
-import json,hashlib,time
+import io,json,hashlib,time
 import pytest
 from werkzeug.security import generate_password_hash
 from app import create_app
@@ -12,7 +12,11 @@ CONTENT='<h2 id="sombra">Una sección</h2><p>La revisión será semanal.</p>'
 def app(tmp_path):
     mirror=tmp_path/'mirror';mirror.mkdir();(mirror/'guia.txt').write_text('Contenido público de prueba.')
     report=tmp_path/'reporte-temporal.html';report.write_text('<!doctype html><title>Reporte temporal</title><style>body{color:#111}</style><p>Revisión comunitaria.</p>')
-    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror),'TEMP_REPORT':str(report)})
+    index=tmp_path/'planeacion.json';index.write_text(json.dumps({'version':1,'items':[
+        {'key':'D01','title':'Participación anónima','question':'¿Cómo se participa?','classification':'Directrices y valores','origin':'Prueba'},
+        {'key':'D25','title':'Playlist colectiva','question':'¿Quién la administra?','classification':'Desarrollo','origin':'Prueba'},
+    ]}))
+    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror),'DEVELOPMENT_REPORT':str(report),'DEVELOPMENT_INDEX':str(index),'TRANSCRIBE_API_KEY':'test-key'})
     with connect(a.config['DATABASE']) as c:
         for name,role in [('owner','owner'),('member','member'),('reviewer','reviewer'),('reader','reader'),('temporary','member')]:
             c.execute('INSERT INTO users(username,name,password_hash,role,must_change,created) VALUES(?,?,?,?,?,?)',(name,name,generate_password_hash(PASS),role,int(name=='temporary'),now()))
@@ -58,18 +62,45 @@ def test_public_read_and_no_anonymous_mutation(app):
     assert c.get('/archivo-proton.html').status_code==404
     assert c.get('/editar/archivo-proton').status_code in [401,404]
 
-def test_temporary_report_is_public_isolated_and_not_indexed(app):
+def test_development_plan_is_public_and_report_is_isolated(app):
     c=client(app)
-    page=c.get('/reporte-temporal')
-    assert page.status_code==200 and b'Reporte temporal' in page.data
-    assert page.headers['X-Robots-Tag']=='noindex, nofollow, noarchive'
-    policy=page.headers['Content-Security-Policy']
+    page=c.get('/planeacion-desarrollo-plataforma')
+    assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data
+    assert 'microphone=(self)' in page.headers['Permissions-Policy']
+    report=c.get('/planeacion-desarrollo-plataforma/informe')
+    assert report.status_code==200 and b'Reporte temporal' in report.data
+    assert report.headers['X-Robots-Tag']=='noindex, nofollow, noarchive'
+    assert report.headers['X-Frame-Options']=='SAMEORIGIN'
+    policy=report.headers['Content-Security-Policy']
     assert "default-src 'none'" in policy and "media-src data:" in policy and "connect-src 'none'" in policy
-    alias=c.get('/reporte_temporal')
-    assert alias.status_code==302 and alias.headers['Location']=='/reporte-temporal'
-    assert '/reporte-temporal' not in c.get('/sitemap.xml').text
+    for alias in ['/reporte-temporal','/reporte_temporal']:
+        response=c.get(alias);assert response.status_code==302 and response.headers['Location']=='/planeacion-desarrollo-plataforma'
+    sitemap=c.get('/sitemap.xml').text
+    assert '/planeacion-desarrollo-plataforma</loc>' in sitemap and '/planeacion-desarrollo-plataforma/informe' not in sitemap
     robots=c.get('/robots.txt').text
-    assert 'Disallow: /reporte-temporal' in robots and 'Disallow: /reporte_temporal' in robots
+    assert 'Disallow: /planeacion-desarrollo-plataforma/informe' in robots
+
+def test_development_responses_require_account_and_preserve_history(app):
+    anonymous=client(app)
+    assert post(anonymous,'/api/development/items/D01/responses',{'body':'Una respuesta.'}).status_code==401
+    reader=client(app,'reader')
+    assert post(reader,'/api/development/items/D01/responses',{'body':'No debe guardarse.'}).status_code==403
+    member=client(app,'member')
+    first=post(member,'/api/development/items/D01/responses',{'body':'Primera respuesta revisable.'})
+    second=post(member,'/api/development/items/D01/responses',{'body':'Segunda respuesta con más detalle.'})
+    assert first.status_code==201 and second.status_code==201
+    with connect(app.config['DATABASE']) as database:
+        assert database.execute("SELECT status FROM development_items WHERE key='D01'").fetchone()[0]=='answered'
+        assert database.execute("SELECT COUNT(*) FROM development_responses WHERE item_key='D01'").fetchone()[0]==2
+    page=anonymous.get('/planeacion-desarrollo-plataforma')
+    assert b'Primera respuesta revisable.' in page.data and b'Segunda respuesta con m' in page.data
+
+def test_voice_transcription_returns_editable_draft_without_saving(app,monkeypatch):
+    monkeypatch.setattr('app.transcribe_audio',lambda payload,mimetype,config:'Texto transcrito para revisar.')
+    member=client(app,'member');session=member.get('/api/session').json
+    response=member.post('/api/development/transcribe',data={'audio':(io.BytesIO(b'a'*1500),'respuesta.webm')},content_type='multipart/form-data',headers={'Origin':'http://localhost','X-CSRF-Token':session['csrf']})
+    assert response.status_code==200 and response.json=={'text':'Texto transcrito para revisar.'}
+    with connect(app.config['DATABASE']) as database:assert database.execute('SELECT COUNT(*) FROM development_responses').fetchone()[0]==0
 
 def test_csrf_and_origin(app):
     c=client(app,'owner');s=c.get('/api/session').json

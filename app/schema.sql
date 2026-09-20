@@ -10,8 +10,13 @@ CREATE TABLE IF NOT EXISTS comments(id INTEGER PRIMARY KEY, thread_id INTEGER NO
 CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY, thread_id INTEGER NOT NULL REFERENCES threads(id), payload TEXT NOT NULL, source TEXT NOT NULL, comment_count INTEGER NOT NULL, document_version INTEGER NOT NULL, approved INTEGER NOT NULL DEFAULT 0, author INTEGER NOT NULL REFERENCES users(id), created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, thread_id INTEGER REFERENCES threads(id), actor INTEGER REFERENCES users(id), kind TEXT NOT NULL, detail TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS ai_jobs(id INTEGER PRIMARY KEY, thread_id INTEGER NOT NULL REFERENCES threads(id), actor INTEGER NOT NULL REFERENCES users(id), state TEXT NOT NULL DEFAULT 'queued', error TEXT NOT NULL DEFAULT '', created TEXT NOT NULL, started TEXT, finished TEXT);
+CREATE TABLE IF NOT EXISTS development_items(key TEXT PRIMARY KEY, title TEXT NOT NULL, question TEXT NOT NULL, classification TEXT NOT NULL, origin TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','answered','needs_clarification','in_progress','implemented','deferred','closed')), created TEXT NOT NULL, updated TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS development_responses(id INTEGER PRIMARY KEY, item_key TEXT NOT NULL REFERENCES development_items(key), author INTEGER NOT NULL REFERENCES users(id), body TEXT NOT NULL, created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS development_events(id INTEGER PRIMARY KEY, item_key TEXT NOT NULL REFERENCES development_items(key), actor INTEGER REFERENCES users(id), kind TEXT NOT NULL, detail TEXT NOT NULL, created TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_comments_thread ON comments(thread_id,id);
 CREATE INDEX IF NOT EXISTS idx_events_thread ON events(thread_id,id);
 CREATE INDEX IF NOT EXISTS idx_reviews_thread ON reviews(thread_id,id);
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON ai_jobs(state,id);
 CREATE INDEX IF NOT EXISTS idx_drive_parent ON drive_items(parent_path,active,name);
+CREATE INDEX IF NOT EXISTS idx_development_responses_item ON development_responses(item_key,id);
+CREATE INDEX IF NOT EXISTS idx_development_events_item ON development_events(item_key,id);
