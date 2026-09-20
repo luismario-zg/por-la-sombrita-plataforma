@@ -49,16 +49,25 @@ def sync_plan_items(connection,index_path,stamp):
         if not isinstance(key,str) or not key or len(key)>30 or key in seen:raise RuntimeError('Hay un identificador de planeación inválido o duplicado.')
         seen.add(key)
         values=[]
-        for field,limit in [('title',180),('question',3000),('classification',120),('origin',500)]:
+        fields=[('title',180,True),('question',3000,True),('classification',160,True),('dimensions',500,False),
+            ('analysis',4000,True),('next_step',4000,True),('proposal',6000,True),('alternatives',6000,True),
+            ('resolver',2000,True),('timing',1000,True),('origin',1000,True),('related_items',1000,False)]
+        for field,limit,required in fields:
             value=row.get(field,'')
-            if not isinstance(value,str) or not value.strip() or len(value)>limit:raise RuntimeError(f'El campo {field} del índice de planeación no es válido.')
+            if not isinstance(value,str) or (required and not value.strip()) or len(value)>limit:raise RuntimeError(f'El campo {field} del índice de planeación no es válido.')
             values.append(value.strip())
-        connection.execute('''INSERT INTO development_items(key,title,question,classification,origin,sort_order,status,created,updated)
-            VALUES(?,?,?,?,?,?,\'pending\',?,?) ON CONFLICT(key) DO UPDATE SET
-            title=excluded.title,question=excluded.question,classification=excluded.classification,
-            origin=excluded.origin,sort_order=excluded.sort_order,updated=CASE WHEN
+        connection.execute('''INSERT INTO development_items(key,title,question,classification,dimensions,analysis,next_step,proposal,alternatives,resolver,timing,origin,related_items,sort_order,status,created,updated)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'pending\',?,?) ON CONFLICT(key) DO UPDATE SET
+            title=excluded.title,question=excluded.question,classification=excluded.classification,dimensions=excluded.dimensions,
+            analysis=excluded.analysis,next_step=excluded.next_step,proposal=excluded.proposal,alternatives=excluded.alternatives,
+            resolver=excluded.resolver,timing=excluded.timing,origin=excluded.origin,related_items=excluded.related_items,
+            sort_order=excluded.sort_order,updated=CASE WHEN
             development_items.title<>excluded.title OR development_items.question<>excluded.question OR
-            development_items.classification<>excluded.classification OR development_items.origin<>excluded.origin OR
+            development_items.classification<>excluded.classification OR development_items.dimensions<>excluded.dimensions OR
+            development_items.analysis<>excluded.analysis OR development_items.next_step<>excluded.next_step OR
+            development_items.proposal<>excluded.proposal OR development_items.alternatives<>excluded.alternatives OR
+            development_items.resolver<>excluded.resolver OR development_items.timing<>excluded.timing OR
+            development_items.origin<>excluded.origin OR development_items.related_items<>excluded.related_items OR
             development_items.sort_order<>excluded.sort_order THEN excluded.updated ELSE development_items.updated END''',
             (key,*values,position,stamp,stamp))
     return len(rows)

@@ -12,9 +12,10 @@ CONTENT='<h2 id="sombra">Una sección</h2><p>La revisión será semanal.</p>'
 def app(tmp_path):
     mirror=tmp_path/'mirror';mirror.mkdir();(mirror/'guia.txt').write_text('Contenido público de prueba.')
     report=tmp_path/'reporte-temporal.html';report.write_text('<!doctype html><title>Reporte temporal</title><style>body{color:#111}</style><p>Revisión comunitaria.</p>')
-    index=tmp_path/'planeacion.json';index.write_text(json.dumps({'version':1,'items':[
-        {'key':'D01','title':'Participación anónima','question':'¿Cómo se participa?','classification':'Directrices y valores','origin':'Prueba'},
-        {'key':'D25','title':'Playlist colectiva','question':'¿Quién la administra?','classification':'Desarrollo','origin':'Prueba'},
+    common={'dimensions':'Desarrollo','analysis':'Lectura de prueba.','next_step':'Siguiente paso de prueba.','proposal':'Propuesta de prueba.','alternatives':'Alternativa de prueba.','resolver':'La comunidad.','timing':'Antes de implementar.','origin':'Prueba','related_items':'R01'}
+    index=tmp_path/'planeacion.json';index.write_text(json.dumps({'version':2,'items':[
+        {'key':'D01','title':'Participación anónima','question':'¿Cómo se participa?','classification':'Directrices y valores',**common},
+        {'key':'D25','title':'Playlist colectiva','question':'¿Quién la administra?','classification':'Desarrollo',**common},
     ]}))
     a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror),'DEVELOPMENT_REPORT':str(report),'DEVELOPMENT_INDEX':str(index),'TRANSCRIBE_API_KEY':'test-key'})
     with connect(a.config['DATABASE']) as c:
@@ -65,7 +66,7 @@ def test_public_read_and_no_anonymous_mutation(app):
 def test_development_plan_is_public_and_report_is_isolated(app):
     c=client(app)
     page=c.get('/planeacion-desarrollo-plataforma')
-    assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data
+    assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data and b'Propuesta para discutir' in page.data and b'Lectura de prueba.' in page.data
     assert 'microphone=(self)' in page.headers['Permissions-Policy']
     report=c.get('/planeacion-desarrollo-plataforma/informe')
     assert report.status_code==200 and b'Reporte temporal' in report.data

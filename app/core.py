@@ -43,6 +43,9 @@ def init_db(path):
         if 'drive_item_id' not in thread_columns:
             c.execute('ALTER TABLE threads ADD COLUMN drive_item_id INTEGER REFERENCES drive_items(id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_threads_drive ON threads(drive_item_id,id)')
+        development_columns={r['name'] for r in c.execute('PRAGMA table_info(development_items)')}
+        for name in ['dimensions','analysis','next_step','proposal','alternatives','resolver','timing','related_items']:
+            if name not in development_columns:c.execute(f"ALTER TABLE development_items ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
     Path(path).chmod(0o600)
 
 def user():

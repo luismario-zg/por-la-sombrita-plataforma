@@ -1,180 +1,380 @@
 {
-  "version": 1,
+  "version": 2,
   "items": [
     {
       "key": "D01",
       "title": "Participación anónima",
       "question": "¿Dónde puede comentar sin registro una persona y cuándo se vuelve pública su aportación?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A01; C-02/C-04; regla actual de autenticación."
+      "dimensions": "Desarrollo · Organización",
+      "analysis": "El fondo es si la voz ciudadana puede participar sin identificarse y bajo qué condiciones se publica; el formulario es solo su implementación.",
+      "next_step": "Llevar a discusión y voto el alcance del anonimato y la moderación. Con esa resolución, concretar la recepción sin cuenta y sus permisos junto con D02.",
+      "proposal": "Formulario anónimo vinculado al asunto, con recepción y moderación antes de publicarse; conservar el recorrido identificado como opción preferida. Es una recomendación operativa, no una condición expresada en el audio.",
+      "alternatives": "Publicación inmediata con moderación posterior; recepción privada con respuesta pública; mantener temporalmente la regla actual mientras se resuelve. Esta última no satisface todavía la propuesta del audio.",
+      "resolver": "Comunidad acuerda el alcance; administración implementa y personas moderadoras aceptan el trabajo.",
+      "timing": "Activar aportaciones sin cuenta (F3).",
+      "origin": "A01; C-02/C-04; regla actual de autenticación.",
+      "related_items": "R01, R02"
     },
     {
       "key": "D02",
       "title": "Identidad, verificación y datos de participación",
       "question": "¿Qué anonimato se ofrece y cómo convive con la verificación de cuentas de un mes y el archivo de comentarios?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A01; C-04 y ROADMAP actual."
+      "dimensions": "Desarrollo · Verificación",
+      "analysis": "Verificación, conservación y archivo de comentarios afectan la relación con las personas; no son únicamente opciones de configuración.",
+      "next_step": "Discutir y votar las reglas de identidad, plazos, avisos y revisión. Comprobar su viabilidad y traducirlas después a controles de la plataforma.",
+      "proposal": "Distinguir ausencia de identidad pública, datos técnicos mínimos contra abuso y cuentas verificadas; no aplicar el plazo de verificación a quien nunca creó una cuenta. Definir avisos, conservación, revisión y apelación.",
+      "alternatives": "Anonimato solo público con cuenta (no cubre A01); participación completamente sin cuenta con controles; dejar verificación mensual para fase posterior documentada.",
+      "resolver": "Comunidad y responsables de privacidad/moderación, con implementación administrativa.",
+      "timing": "Activar anonimato o registro automático.",
+      "origin": "A01; C-04 y ROADMAP actual.",
+      "related_items": "R02"
     },
     {
       "key": "D03",
       "title": "Intención y alcance de las directrices",
       "question": "¿Cómo se interpreta el espíritu de una directriz, quién aclara disputas y cómo se relaciona con estándares y reglas específicas?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A01, A14, A15; preguntas históricas sobre ratificación."
+      "dimensions": "Organización · Contenidos y difusión",
+      "analysis": "Define cómo se interpreta el espíritu de una directriz y cómo se aclaran diferencias entre principio, ejemplo y regla.",
+      "next_step": "Preparar una propuesta de interpretación y alcance para discusión y voto; después ajustar fichas, aviso introductorio e historial de aclaraciones.",
+      "proposal": "Fichas de principio + intención + ejemplo + alcance + estado, aviso introductorio y aclaraciones versionadas; decisiones discutidas sin veto interpretativo unilateral.",
+      "alternatives": "Principios amplios con ejemplos; reglamento más detallado; mezcla explícita de ambas capas.",
+      "resolver": "Comunidad, con facilitación y edición documental.",
+      "timing": "Ratificar directrices o usarlas para bloquear una acción.",
+      "origin": "A01, A14, A15; preguntas históricas sobre ratificación.",
+      "related_items": "R03, R04, R39"
     },
     {
       "key": "D04",
       "title": "Bibliotecas de conocimiento e historia",
       "question": "¿Qué nombres, alcance, fuentes y frecuencia de revisión tendrán las dos ramas de estado del arte y quién las sostendrá?",
       "classification": "Contenidos, documentación y difusión",
-      "origin": "A02, A03; C-07."
+      "dimensions": "Desarrollo · Organización",
+      "analysis": "La pregunta principal es editorial: alcance, fuentes, historia, nombres y mantenimiento de las dos bibliotecas. La navegación es una consecuencia.",
+      "next_step": "Definir las dos ramas, sus fuentes y responsables que acepten la revisión. Convertir las necesidades de navegación en tareas sin votar cada detalle editorial.",
+      "proposal": "Conocimiento → Organización comunitaria y Sombra/movilidad/confort; historia dentro de ambas, resumen inicial y bibliografía extensa. Priorizar fuentes, declarar límites y fecha de revisión.",
+      "alternatives": "Dos secciones independientes en el menú; una biblioteca con filtros. Mantener historia de PLS aparte de historias temáticas.",
+      "resolver": "Equipo de investigación y edición, con responsables que acepten.",
+      "timing": "Completar contenidos de F2; coordinar hito de investigación 2026.",
+      "origin": "A02, A03; C-07.",
+      "related_items": "R05, R06, R07, R08"
     },
     {
       "key": "D05",
       "title": "Redacción humana y asistencia de IA",
       "question": "¿Quién quiere reescribir, quién convoca, qué criterios de revisión se usarán y cómo se reconocerán las contribuciones?",
       "classification": "Contenidos, documentación y difusión",
-      "origin": "A04, A05; C-12."
+      "dimensions": "Directrices y valores · Organización",
+      "analysis": "La reescritura y la convocatoria son trabajo editorial; la posición sobre IA, reconocimiento de autoría y responsabilidad de quienes proponen reescribir tiene una dimensión normativa separada.",
+      "next_step": "Organizar la convocatoria y tareas voluntarias. Si se propone una regla general de autoría o uso de IA, redactarla aparte y llevarla a discusión y voto.",
+      "proposal": "Convocatoria permanente por piezas concretas; tomar voluntariamente edición o reclutamiento; conservar versiones, fuentes y procedencia de la asistencia.",
+      "alternatives": "Revisión humana sobre base asistida; reescritura íntegra por personas; combinación por sección. El audio expresa una invitación/responsabilidad propuesta, no aceptaciones individuales.",
+      "resolver": "Personas interesadas y comunidad; administración facilita edición.",
+      "timing": "Abrir convocatoria editorial y marcar contenidos como revisados.",
+      "origin": "A04, A05; C-12.",
+      "related_items": "R09, R10"
     },
     {
       "key": "D06",
       "title": "Decisión, beneficio y resolución de conflictos",
       "question": "¿Quién participa, con qué reglas se decide y qué hacer cuando dos integrantes discrepan sobre una acción?",
       "classification": "Organización, responsabilidades y toma de decisiones",
-      "origin": "A06, A07; D-TRI-02, P-004/P-005."
+      "dimensions": "Directrices y valores · Desarrollo",
+      "analysis": "Electorado, quórum, criterios, objeciones y resolución de conflictos son reglas para decidir; una función de cierre de hilos no las sustituye.",
+      "next_step": "Preparar y acordar el procedimiento de discusión y votación antes de ratificar otras reglas; documentar cómo se adopta ese procedimiento inicial y sus resultados.",
+      "proposal": "Formulario de asunto y alternativas, criterios de beneficio, intento de acuerdo, facilitación y mecanismo de decisión definido por la comunidad; acta, resultado y siguiente acción. Reutilizar pendientes de quórum/umbral en vez de crear reglas contradictorias.",
+      "alternatives": "Consenso; consentimiento con objeciones motivadas; votación con electorado, quórum, umbral y empate acordados; combinación por tipo de decisión.",
+      "resolver": "Comunidad; facilitación acompaña. El administrador técnico no sustituye al órgano decisor.",
+      "timing": "Declarar consensos, ratificar políticas o resolver D-TRI-01.",
+      "origin": "A06, A07; D-TRI-02, P-004/P-005.",
+      "related_items": "R11, R12, R15"
     },
     {
       "key": "D07",
       "title": "Autonomía editorial, alcance y saturación",
       "question": "¿Qué importancia se dará al alcance algorítmico y qué evidencia justificaría cambiar la frecuencia o el formato?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A06, A07, A15."
+      "dimensions": "Contenidos y difusión · Verificación",
+      "analysis": "La prioridad entre autonomía editorial, alcance y atención expresa una postura comunitaria. La saturación de publicaciones exige observaciones, no solo preferencias.",
+      "next_step": "Discutir y votar la orientación editorial y sus criterios de revisión. Evaluar la evidencia de saturación antes de aplicar ajustes concretos.",
+      "proposal": "Discutir la propuesta de priorizar pertinencia y publicación oportuna; evaluar después atención, comprensión e impacto, además de alcance. Definir un ensayo y revisión sin anticipar el resultado.",
+      "alternatives": "Prioridad a crecimiento/marketing; prioridad a autonomía editorial; enfoque mixto. La preferencia de Luis Mario se conserva como postura identificada.",
+      "resolver": "Comunidad y comunicación.",
+      "timing": "Convertir preferencias en estándar editorial (F3).",
+      "origin": "A06, A07, A15.",
+      "related_items": "R13, R17, R39, R40"
     },
     {
       "key": "D08",
       "title": "Revisión y publicación sin dependencia de una persona",
       "question": "¿Habrá comité, revisión por pares u otra vía; quién publica y qué sucede si nadie responde?",
       "classification": "Organización, responsabilidades y toma de decisiones",
-      "origin": "A06, A07, A10, A14."
+      "dimensions": "Directrices y valores · Contenidos y difusión · Desarrollo",
+      "analysis": "Elegir comité, pares o autonomía delegada distribuye facultades y trabajo. La cola de publicaciones implementa un acuerdo organizativo previo.",
+      "next_step": "Discutir y votar la forma de revisión y delegación; obtener aceptación de responsables y suplentes, y luego configurar el flujo y sus plazos.",
+      "proposal": "Criterios mínimos públicos, persona revisora y suplencia, seguimiento visible y plazo acordado; no interpretar silencio como consenso. Comité solo si hay capacidad real.",
+      "alternatives": "Comité formal; revisión por una persona con suplente; autonomía delegada en categorías acotadas. Cada modalidad debe prever apelación y urgencias.",
+      "resolver": "Comunidad define; responsables de comunicación aceptan.",
+      "timing": "Activar flujo editorial y delegar publicación.",
+      "origin": "A06, A07, A10, A14.",
+      "related_items": "R14, R15, R24, R38"
     },
     {
       "key": "D09",
       "title": "Autonomía para actuar y razones para detenerse",
       "question": "¿Qué puede hacer una persona por iniciativa propia y qué exige revisión por representar a la comunidad o comprometer recursos?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A07, A12, A14."
+      "dimensions": "Organización · Desarrollo",
+      "analysis": "Delimita autonomía individual, representación de la comunidad y razones de peso para detener una acción; es una directriz de actuación.",
+      "next_step": "Llevar a discusión y voto las categorías de acciones y las facultades correspondientes. Reflejar después esos límites en permisos y seguimiento de objeciones.",
+      "proposal": "Clasificar acciones de bajo impacto, uso de canales oficiales, alianzas, gasto y actividades técnicas reguladas; permisos y objeciones explícitos por categoría. Definir plazos de respuesta según capacidad.",
+      "alternatives": "Delegación amplia con revisión posterior; revisión previa para todas; esquema proporcional. Acordar qué constituye una razón de peso.",
+      "resolver": "Comunidad; administración traduce capacidades técnicas sin inventar autoridad.",
+      "timing": "Habilitar ejecución/publicación autónoma.",
+      "origin": "A07, A12, A14.",
+      "related_items": "R16, R17"
     },
     {
       "key": "D10",
       "title": "Convivencia y formas de comunicación",
       "question": "¿Dónde se alojará esta reflexión y quién la elaborará o facilitará?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A08; A06/A07."
+      "dimensions": "Contenidos y difusión · Organización",
+      "analysis": "El cuidado en la forma de hablar puede convertirse en una directriz de convivencia. Elegir dónde escribirla y quién la redacta son asuntos operativos distintos.",
+      "next_step": "Elaborar una propuesta de prácticas de escucha y desacuerdo para discutir y votar; acordar por separado quién la facilita y dónde se documenta.",
+      "proposal": "Comunidad → Convivencia y facilitación, vinculada al manual y al mecanismo de conflictos; prácticas breves de escucha y desacuerdo, revisables con experiencias.",
+      "alternatives": "Capítulo del manual; documento propio; actividades formativas periódicas. No hay responsable nombrado en el audio.",
+      "resolver": "Personas interesadas en facilitación/cuidados, previa aceptación.",
+      "timing": "Dar por atendida la solicitud A08; puede elaborarse en paralelo.",
+      "origin": "A08; A06/A07.",
+      "related_items": "R18"
     },
     {
       "key": "D11",
       "title": "Asistentes de texto y voz",
       "question": "¿Qué preguntas responderán, con qué fuentes, modelo, presupuesto, privacidad y persona responsable?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "A09; C-05."
+      "dimensions": "Directrices y valores · Organización",
+      "analysis": "Los asistentes de texto y voz son dos capacidades de producto. Fuentes, privacidad, presupuesto y responsabilidad condicionan su diseño.",
+      "next_step": "Concretar y priorizar ambas subtareas; acordar límites comunitarios cuando correspondan y realizar una evaluación técnica antes de elegir modelo o publicar respuestas.",
+      "proposal": "Publicar ya ambos pendientes; empezar con texto y fuentes públicas revisadas con citas, después voz optativa. No otorgar al asistente capacidad de decidir, votar, cambiar documentos o ejecutar código.",
+      "alternatives": "Solo buscador guiado inicialmente; asistente textual; texto y voz completos. Evaluar proveedor/local según recursos y pruebas, no por promesa genérica.",
+      "resolver": "Comunidad define alcance; equipo técnico y custodios aprueban operación.",
+      "timing": "Construir F5; el registro del pendiente ocurre en F1.",
+      "origin": "A09; C-05.",
+      "related_items": "R19"
     },
     {
       "key": "D12",
       "title": "Plan comunitario, GitHub y revisores de código",
       "question": "¿Qué sistema manda para el estado de tareas e issues, quién revisa contribuciones y cómo se publica un cambio?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "A09, A12; repositorio público existente."
+      "dimensions": "Organización",
+      "analysis": "La vinculación de tareas e issues y la fuente de estado son diseño de integración; la revisión y el despliegue dependen de permisos y responsabilidades reales.",
+      "next_step": "Elegir cómo se relacionan plataforma y GitHub y documentar el flujo de contribución con mantenedores habilitados. La comunidad conserva la priorización del trabajo.",
+      "proposal": "La tarea comunitaria conserva propósito/prioridad y enlaza el issue técnico; GitHub conserva PR, pruebas y versión entregada. Enlace manual verificado primero; automatización unidireccional solo si aporta valor.",
+      "alternatives": "GitHub como fuente única para tareas técnicas; plataforma como fuente principal con espejo; sincronización bidireccional con reglas de conflicto (mayor complejidad).",
+      "resolver": "Mantenedores con permisos reales y verificados de repositorio/despliegue; la comunidad define prioridades. Ser owner/admin de la plataforma no concede esos permisos externos.",
+      "timing": "Abrir colaboración y automatizar sincronización.",
+      "origin": "A09, A12; repositorio público existente.",
+      "related_items": "R20, R21, R22, R30"
     },
     {
       "key": "D13",
       "title": "Arte: archivo, destacada y seguimiento",
       "question": "¿Dónde se conservará el arte además de Instagram, qué se considera relacionado y quién impulsa su publicación?",
       "classification": "Contenidos, documentación y difusión",
-      "origin": "A10; A13/A14."
+      "dimensions": "Desarrollo · Relación institucional, licencias y continuidad · Organización",
+      "analysis": "Seleccionar, archivar y difundir arte es una labor editorial con permisos de uso y seguimiento; una galería sería solo una posible herramienta.",
+      "next_step": "Acordar colección, ubicación y forma de impulsar piezas; verificar atribución y uso. Desarrollar soporte adicional únicamente si el flujo elegido lo requiere.",
+      "proposal": "Comunicación → Arte, como colección enlazada al archivo público y a la destacada de Instagram; registrar descubridor/impulsor, permiso, crédito y estado.",
+      "alternatives": "Solo destacada de Instagram; galería propia; colección de enlaces al archivo. La permanencia de Instagram no sustituye un archivo comunitario.",
+      "resolver": "Comunicación y personas que aporten piezas.",
+      "timing": "Publicar obras o crear la destacada.",
+      "origin": "A10; A13/A14.",
+      "related_items": "R23, R24"
     },
     {
       "key": "D14",
       "title": "Dinámicas, actividades y primer caso",
       "question": "¿Se usará “dinámicas” como nombre visible, qué abarca y cómo se valida el relato del 15 de septiembre?",
       "classification": "Contenidos, documentación y difusión",
-      "origin": "A11; historia ciudadana de 2026."
+      "dimensions": "Verificación · Desarrollo",
+      "analysis": "La taxonomía de dinámicas y su historia son contenido; la valoración del caso del 15 de septiembre debe distinguir relato y evidencia.",
+      "next_step": "Definir el alcance editorial y contrastar el caso con sus fuentes antes de publicarlo como historia revisada. Después ajustar los tipos de actividad si hace falta.",
+      "proposal": "Sección Actividades con el término dinámicas en la descripción; incluir presenciales y digitales. Ficha del 15-sep como relato a contrastar, con lugar, participantes y conclusiones abiertas a completar.",
+      "alternatives": "Sección Dinámicas independiente; incluirlas en Sesiones; lista unificada de actividades con tipos. No confundir primera dinámica comunitaria relatada con primera actividad histórica del proyecto.",
+      "resolver": "Documentación y participantes del caso, sin asignarles tareas sin aceptación.",
+      "timing": "Migrar el caso a historia oficial; no bloquea diseñar el módulo.",
+      "origin": "A11; historia ciudadana de 2026.",
+      "related_items": "R25, R27"
     },
     {
       "key": "D15",
       "title": "Convocatorias: estados, fechas y reglas",
       "question": "¿Cuáles serán las transiciones, qué hace activa a una convocatoria y cómo se representa la permanente?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "A11."
+      "dimensions": "Contenidos y difusión · Organización",
+      "analysis": "Estados, fechas, permanencia y filtros forman el modelo funcional de convocatorias. Su significado debe acordarse con quienes organizan y comunican.",
+      "next_step": "Precisar campos y transiciones, probar convocatoria temporal y permanente y convertirlos en criterios verificables. Una nueva regla de publicación se decide por separado.",
+      "proposal": "Separar edición (idea/borrador/lista/publicada), vigencia (futura/activa/cerrada/permanente) y ejecución de actividad (programada/en curso/finalizada/cancelada). Confirmar zona horaria y campos mínimos.",
+      "alternatives": "Una sola lista de estados (más simple pero ambigua); ejes separados mostrados como etiquetas comprensibles. Distinguir difusión de realización.",
+      "resolver": "Organización de actividades y comunicación; desarrollo implementa.",
+      "timing": "Construir listados y filtros de F2.",
+      "origin": "A11.",
+      "related_items": "R26, R28, R29"
     },
     {
       "key": "D16",
       "title": "Tareas, interés, responsabilidades y especialidades",
       "question": "¿Quién crea/prioriza/cierra tareas, cómo se acepta una responsabilidad y quién verifica requisitos profesionales?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "A12; C-09."
+      "dimensions": "Organización · Directrices y valores · Verificación",
+      "analysis": "La ficha de tareas y sus filtros son producto; quién prioriza o acepta responsabilidades es organización, y una exigencia legal necesita comprobación competente.",
+      "next_step": "Acordar facultades y aceptación de tareas antes de implementarlas. Separar habilidades deseables de requisitos obligatorios y verificar estos últimos sin someter hechos legales a votación.",
+      "proposal": "Fichas con fecha o “por acordar”, habilidades deseables y requisitos obligatorios separados; interés no equivale a asignación. Filtros compactos con conteo y aviso cuando no aplican.",
+      "alternatives": "Alta abierta con revisión; alta por responsables; permisos por tipo. Elegir entre filtros ocultos o desactivados mediante prueba de uso; no exigir certificación universal.",
+      "resolver": "Comunidad y responsables del área; profesional competente cuando aplique.",
+      "timing": "Activar incorporación a tareas y filtros profesionales.",
+      "origin": "A12; C-09.",
+      "related_items": "R31, R32, R33, R34"
     },
     {
       "key": "D17",
       "title": "Recursos gráficos, licencias y réplica",
       "question": "¿Qué assets pueden compartirse, bajo qué licencia y qué uso del nombre/logotipo implica afiliación?",
       "classification": "Relación institucional, licencias y continuidad",
-      "origin": "A13; LICENSE actual del código."
+      "dimensions": "Directrices y valores · Contenidos y difusión · Verificación",
+      "analysis": "La apertura y libertad de adaptación pueden expresar un valor; los derechos sobre cada asset, las licencias y el uso del nombre deben verificarse con sus titulares.",
+      "next_step": "Discutir y votar la política de compartir y representar a PLS, si se propone como regla común; comprobar permisos antes de distribuir el kit. La licencia MIT del código no decide la de cada material.",
+      "proposal": "Publicar un kit versionado con licencias por material y guía para adoptar o adaptar libremente lo permitido. Diferenciar código MIT, contenidos, obras y marcas; confirmar derechos antes de ofrecer descargas.",
+      "alternatives": "Kit completo de identidad; solo plantillas/licencias confirmadas; guía de inspiración con nueva identidad. No imponer la estética local a otras comunidades.",
+      "resolver": "Titulares/autores de materiales y comunidad.",
+      "timing": "Distribuir el kit o afirmar autorización sobre materiales.",
+      "origin": "A13; LICENSE actual del código.",
+      "related_items": "R35, R36"
     },
     {
       "key": "D18",
       "title": "Alcance de “estándares” y pertenencia",
       "question": "¿Se exige alineación a publicaciones, actividades, proyectos o también a personas, y en qué canales?",
       "classification": "Directrices y valores pendientes de discutir y votar",
-      "origin": "A14, A15; diferencia cuenta/membresía."
+      "dimensions": "Contenidos y difusión · Organización · Desarrollo",
+      "analysis": "Determinar si los estándares se aplican a materiales, acciones o personas cambia el significado de pertenencia y participación.",
+      "next_step": "Discutir y votar ese alcance antes de usar un criterio visual como condición de membresía. Publicar luego estándares y excepciones con su referencia de aprobación.",
+      "proposal": "Empezar por estándares de materiales y acciones institucionales; separar membresía y participación. Relacionar cada estándar con su principio, ejemplo y proceso de excepción/revisión.",
+      "alternatives": "Estándares de publicaciones solamente; de proyectos/acciones; criterios de pertenencia debatidos aparte. El audio deja ese alcance abierto.",
+      "resolver": "Comunidad mediante su mecanismo de decisión.",
+      "timing": "Aplicar estándares a personas, contenidos o actos externos.",
+      "origin": "A14, A15; diferencia cuenta/membresía.",
+      "related_items": "R37, R38, R39"
     },
     {
       "key": "D19",
       "title": "Dominio y alojamiento de LABNL",
       "question": "¿Aceptaría LABNL proporcionar esos recursos y con qué titularidad, soporte, costo y autonomía para la comunidad?",
       "classification": "Relación institucional, licencias y continuidad",
-      "origin": "A17, A18."
+      "dimensions": "Organización · Directrices y valores",
+      "analysis": "Pedir dominio y alojamiento requiere un mandato comunitario y una respuesta institucional; no es una función de la interfaz ni un apoyo ya confirmado.",
+      "next_step": "Acordar o votar la postura y condiciones de la solicitud, designar interlocución aceptada y obtener respuesta de LABNL antes de planear una migración efectiva.",
+      "proposal": "Preparar propuesta institucional y condiciones de continuidad; conservar plsmty.bespokem.mx hasta una decisión verificable. Documentar por qué se usó ese dominio y cualquier apoyo recibido.",
+      "alternatives": "Alojamiento y dominio institucionales; dominio institucional con alojamiento comunitario; infraestructura independiente con apoyo parcial. No hay compromiso de LABNL demostrado en las notas.",
+      "resolver": "Interlocución que la comunidad designe y representante competente de LABNL.",
+      "timing": "Prometer apoyo institucional o modificar DNS/alojamiento.",
+      "origin": "A17, A18.",
+      "related_items": "R42, R43, R47"
     },
     {
       "key": "D20",
       "title": "Control, custodia y salida del proveedor",
       "question": "¿Quién representa a la comunidad como custodio y cómo recibe activos y accesos si cambia o desaparece el apoyo?",
       "classification": "Relación institucional, licencias y continuidad",
-      "origin": "A17, A18; operación actual."
+      "dimensions": "Directrices y valores · Organización · Desarrollo",
+      "analysis": "El control comunitario es un principio por discutir; custodia, recuperación y transferencia son acuerdos y procedimientos concretos de continuidad.",
+      "next_step": "Discutir y votar el principio y las reglas de custodia, designar responsables que acepten y documentar con el proveedor el plan de salida y las pruebas de recuperación.",
+      "proposal": "Acuerdo escrito, inventario sin secretos, al menos custodia principal y recuperación definida, exportación/restauración comprobada y transferencia segura de accesos con revocación cuando proceda.",
+      "alternatives": "Titularidad comunitaria directa; custodia institucional con transferencia pactada; terceros con contrato y plan de salida. Precisar respaldo, retención y recuperación.",
+      "resolver": "Comunidad, administración y proveedor/institución involucrados.",
+      "timing": "Migrar infraestructura o distribuir instalaciones replicables.",
+      "origin": "A17, A18; operación actual.",
+      "related_items": "R43, R44, R47"
     },
     {
       "key": "D21",
       "title": "Modelo de distribución del software abierto",
       "question": "¿Se replicará mediante instalaciones independientes, una plantilla/fork o un servicio para varias comunidades?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "A18; A13; repositorio público actual."
+      "dimensions": "Relación institucional, licencias y continuidad · Organización",
+      "analysis": "La decisión abierta es cómo distribuir el software ya planteado como abierto: plantilla, instancia independiente o servicio compartido. No hace falta reabrir automáticamente su finalidad.",
+      "next_step": "Comparar esfuerzo, autonomía y operación de cada modalidad, priorizar una con mantenedores y probar una instalación externa. Llevar cambios de compromisos o licencias a quienes puedan autorizarlos.",
+      "proposal": "Primera versión instalable por comunidad, configuración separada, datos ficticios y guía de réplica. Mantener licencia MIT del código salvo revisión expresa; no incluir datos reales ni suponer que esa licencia cubre otros materiales.",
+      "alternatives": "Plantilla/fork; paquete de instancia independiente; servicio multicomunidad (necesita aislamiento y operación más complejos).",
+      "resolver": "Mantenedores y comunidad; otras comunidades en prueba de instalación.",
+      "timing": "Dar por completada la réplica de F4.",
+      "origin": "A18; A13; repositorio público actual.",
+      "related_items": "R45, R46"
     },
     {
       "key": "D22",
       "title": "Pasajes de audio por confirmar",
       "question": "¿Hay matices o contenido adicional en los intervalos que el reconocimiento automático no resolvió?",
       "classification": "Verificación de información y aclaraciones",
-      "origin": "Control de señal/transcripción; A06 y A08."
+      "dimensions": "",
+      "analysis": "La literalidad de un pasaje y la existencia de información adicional se comprueban escuchándolo; no se eligen por voto.",
+      "next_step": "Cotejar los intervalos señalados, registrar la comprobación y corregir o conservar la incertidumbre. Si surge una idea nueva, incorporarla con su fuente.",
+      "proposal": "Una segunda pasada con otro modelo, sin VAD, no recuperó ideas adicionales. Para certificar literalidad, cotejar en el anexo A08 desde 00:20 y A06 desde 05:32; corregir si se identifica algo nuevo. Los errores fonéticos evidentes se normalizan con el contexto, sin cambiar la transcripción original.",
+      "alternatives": "Confirmación del autor; revisión de otra persona con el audio; mantener incertidumbre explícita. No inventar contenido para rellenar el intervalo.",
+      "resolver": "Autor de las notas o persona que pueda cotejar el audio.",
+      "timing": "Certificar transcripción literal íntegra; no bloquea las ideas claramente registradas.",
+      "origin": "Control de señal/transcripción; A06 y A08.",
+      "related_items": ""
     },
     {
       "key": "D23",
       "title": "Capacidad, responsables y calendario real",
       "question": "¿Qué personas aceptan trabajo, cuánto tiempo pueden dedicar y cuál será el alcance del primer ciclo?",
       "classification": "Organización, responsabilidades y toma de decisiones",
-      "origin": "Instrucción inicial sobre habilidades/disponibilidad; C-08/C-10."
+      "dimensions": "Desarrollo · Contenidos y difusión",
+      "analysis": "El calendario depende de disponibilidad y habilidades reales. Priorizar es una decisión colectiva; asumir una tarea requiere aceptación de la persona.",
+      "next_step": "Confirmar capacidades, acordar prioridades y registrar responsables voluntarios. Ajustar el ciclo y sus fechas con esos datos, sin asignaciones implícitas.",
+      "proposal": "Elegir una entrega mínima, confirmar capacidades y revisar cada ciclo; limitar trabajo simultáneo. Mantener las fases como orden recomendado, no fechas comprometidas.",
+      "alternatives": "Un equipo pequeño con tareas secuenciales; varios frentes con responsables distintos; combinación por dependencia. Si falta capacidad, la tarea queda visible como pendiente.",
+      "resolver": "Cada participante acepta; comunidad prioriza; facilitación registra.",
+      "timing": "Convertir el escenario de 12 semanas en compromiso.",
+      "origin": "Instrucción inicial sobre habilidades/disponibilidad; C-08/C-10.",
+      "related_items": ""
     },
     {
       "key": "D24",
       "title": "Contenido nativo de Proton y fuentes vigentes",
       "question": "¿Quién cotejará documentos nativos que no tienen contenido local y qué versión será canónica al incorporarlos?",
       "classification": "Verificación de información y aclaraciones",
-      "origin": "Inventario previo: nueve documentos nativos pendientes; espejo y plataforma desfasados."
+      "dimensions": "Contenidos y difusión",
+      "analysis": "Primero falta cotejar documentos y versiones. Elegir una fuente canónica o publicar una síntesis solo puede resolverse con esa información.",
+      "next_step": "Consultar los documentos nativos pendientes y comparar versiones; registrar evidencia y después acordar el tratamiento editorial. No votar cuál es el contenido de un archivo sin leerlo.",
+      "proposal": "Usar los enlaces convencionales del archivo público, revisar minutas/objetivos/materiales editoriales pendientes y registrar procedencia/fecha. Contrastar con las versiones actuales de la plataforma y la wiki antes de ratificar o importar.",
+      "alternatives": "Revisión manual de fuentes nativas; exportación autorizada de solo los documentos necesarios; conservar referencias sin duplicar contenido hasta poder cotejar.",
+      "resolver": "Documentación y personas con acceso adecuado a las fuentes públicas.",
+      "timing": "Afirmar revisión completa de todo Proton o importar contenido como oficial.",
+      "origin": "Inventario previo: nueve documentos nativos pendientes; espejo y plataforma desfasados.",
+      "related_items": ""
     },
     {
       "key": "D25",
       "title": "Playlist colectiva: enlace, custodia e instrucciones",
       "question": "¿Cuál será la playlist colaborativa de Spotify, quién la administrará y quién redactará las instrucciones de uso?",
       "classification": "Ideas de desarrollo y configuración de la plataforma",
-      "origin": "N01 · Solicitud escrita posterior del usuario; no procede de los 18 audios."
+      "dimensions": "Contenidos y difusión · Organización",
+      "analysis": "La nueva sección, QR y enlace son una idea de desarrollo ya incorporada al plan; la playlist colaborativa y las instrucciones son sus insumos pendientes.",
+      "next_step": "Confirmar playlist, enlace de colaboración y custodia; redactar las instrucciones pendientes y probar que alguien puede añadir una canción. Implementar la sección sin inventar un QR ni pasos de uso.",
+      "proposal": "Sección propia «Rolitas para el solazo» (nombre provisional), con QR hacia el enlace válido para colaborar, enlace directo y breve explicación de su propósito. Dejar las instrucciones marcadas como pendientes de redactar; comprobar su funcionamiento antes de publicar el QR.",
+      "alternatives": "Usar una playlist existente si se confirma que admite colaboración o crear una nueva. Nombre definitivo, cuenta administradora, enlace y responsable de mantenerlo: pendientes. Las instrucciones explicarán cómo abrir, unirse y añadir canciones según el funcionamiento real de Spotify.",
+      "resolver": "Persona que acepte administrar la playlist, persona que redacte las instrucciones y responsable de incorporar la sección.",
+      "timing": "Publicar la nueva sección de F2 con QR operativo e instrucciones completas.",
+      "origin": "N01 · Solicitud escrita posterior del usuario; no procede de los 18 audios.",
+      "related_items": "R48"
     }
   ]
 }

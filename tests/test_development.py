@@ -5,12 +5,14 @@ from app.development import TranscriptionError,sync_plan_items,transcribe_audio
 
 def test_index_refresh_preserves_status_and_new_questions(tmp_path):
     database=tmp_path/'plan.sqlite3';index=tmp_path/'items.json';init_db(database)
-    item={'key':'D01','title':'Título inicial','question':'¿Qué se decide?','classification':'Directrices','origin':'Audio'}
+    item={'key':'D01','title':'Título inicial','question':'¿Qué se decide?','classification':'Directrices','dimensions':'Desarrollo',
+        'analysis':'Análisis.','next_step':'Siguiente paso.','proposal':'Propuesta.','alternatives':'Alternativas.',
+        'resolver':'Comunidad.','timing':'Antes de implementar.','origin':'Audio','related_items':'R01'}
     index.write_text(json.dumps({'items':[item]}))
     with connect(database) as connection:
         assert sync_plan_items(connection,index,'2026-09-20T00:00:00+00:00')==1
         connection.execute("UPDATE development_items SET status='needs_clarification' WHERE key='D01'")
-        connection.execute("INSERT INTO development_items VALUES('P01','Nueva duda','¿Qué falta?','Seguimiento','Ejecución',2,'pending','a','a')")
+        connection.execute("INSERT INTO development_items(key,title,question,classification,origin,sort_order,status,created,updated) VALUES('P01','Nueva duda','¿Qué falta?','Seguimiento','Ejecución',2,'pending','a','a')")
     item['title']='Título corregido';index.write_text(json.dumps({'items':[item]}))
     with connect(database) as connection:
         sync_plan_items(connection,index,'2026-09-20T01:00:00+00:00')
