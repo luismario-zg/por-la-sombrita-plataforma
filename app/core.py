@@ -33,6 +33,9 @@ def init_db(path):
     Path(path).parent.mkdir(parents=True,exist_ok=True,mode=0o700)
     with connect(path) as c:
         c.executescript((Path(__file__).parent/'schema.sql').read_text())
+        # Gunicorn crea la aplicación en cada worker. Serializar la inspección y
+        # las migraciones evita que dos procesos intenten añadir la misma columna.
+        c.execute('BEGIN IMMEDIATE')
         # Migraciones aditivas para instalaciones creadas por versiones anteriores.
         document_columns={r['name'] for r in c.execute('PRAGMA table_info(documents)')}
         if 'hidden' not in document_columns:

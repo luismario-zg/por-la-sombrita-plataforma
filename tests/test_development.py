@@ -1,5 +1,6 @@
 """Continuidad del plan de desarrollo entre respuestas, ejecuciones y reinicios."""
 import json
+from concurrent.futures import ThreadPoolExecutor
 from app.core import connect,init_db
 from app.development import TranscriptionError,sync_plan_items,transcribe_audio
 
@@ -26,3 +27,10 @@ def test_transcription_rejects_invalid_or_tiny_audio_before_provider():
         try:transcribe_audio(payload,mimetype,config)
         except TranscriptionError as error:assert error.status==status
         else:raise AssertionError('Se esperaba rechazo antes de llamar al proveedor.')
+
+def test_parallel_startup_serializes_schema_migrations(tmp_path):
+    database=tmp_path/'parallel.sqlite3'
+    with ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(lambda _:init_db(database),range(8)))
+    with connect(database) as connection:
+        columns={row['name'] for row in connection.execute('PRAGMA table_info(development_items)')}
+        assert {'analysis','proposal','alternatives','resolver','related_items'}<=columns
