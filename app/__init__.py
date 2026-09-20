@@ -16,6 +16,7 @@ def create_app(config=None):
         AI_ENABLED=os.environ.get('PLS_AI_ENABLED','0')=='1',
         PROTON_MIRROR=os.environ.get('PLS_PROTON_MIRROR','/home/claude/projects/pls_proton/espejo/Por La Sombrita MTY General'),
         PROTON_PUBLIC_URL='https://drive.proton.me/urls/YDN71HHPW8#exZbmfOdOazj',
+        TEMP_REPORT=os.environ.get('PLS_TEMP_REPORT',str(data/'reporte-temporal.html')),
     )
     if config:app.config.update(config)
     init_db(app.config['DATABASE'])
@@ -42,7 +43,10 @@ def create_app(config=None):
         response.headers['X-Content-Type-Options']='nosniff';response.headers['X-Frame-Options']='DENY'
         response.headers['Referrer-Policy']='strict-origin-when-cross-origin'
         response.headers['Cache-Control']='no-store'
-        if request.endpoint=='drive_content':
+        if request.endpoint=='temporary_report':
+            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+            response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
+        elif request.endpoint=='drive_content':
             response.headers['Content-Security-Policy']="sandbox; default-src 'none'; frame-ancestors 'self'"
             response.headers['X-Frame-Options']='SAMEORIGIN'
             response.headers['X-Robots-Tag']='noindex, nofollow'
@@ -87,6 +91,15 @@ def create_app(config=None):
         docs=db().execute('SELECT slug,title,intro,status,version FROM documents WHERE hidden=0 ORDER BY rowid').fetchall()
         threads=db().execute(THREAD_SELECT+' ORDER BY t.updated DESC,t.id DESC LIMIT 4').fetchall()
         return render_template('home.html',title='Una ciudad más caminable',docs=docs,threads=threads)
+
+    @app.get('/reporte-temporal')
+    def temporary_report():
+        path=Path(app.config['TEMP_REPORT'])
+        if not path.is_file():abort(404)
+        return send_file(path,mimetype='text/html; charset=utf-8',conditional=True,max_age=0)
+
+    @app.get('/reporte_temporal')
+    def temporary_report_alias():return redirect('/reporte-temporal',code=302)
 
     @app.get('/<slug>.html')
     def document(slug):
@@ -390,7 +403,7 @@ def create_app(config=None):
         return jsonify(password=provisional)
 
     @app.get('/robots.txt')
-    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
+    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
 
     @app.get('/sitemap.xml')
     def sitemap():

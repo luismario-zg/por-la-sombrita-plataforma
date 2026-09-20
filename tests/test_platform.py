@@ -11,7 +11,8 @@ CONTENT='<h2 id="sombra">Una sección</h2><p>La revisión será semanal.</p>'
 @pytest.fixture
 def app(tmp_path):
     mirror=tmp_path/'mirror';mirror.mkdir();(mirror/'guia.txt').write_text('Contenido público de prueba.')
-    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror)})
+    report=tmp_path/'reporte-temporal.html';report.write_text('<!doctype html><title>Reporte temporal</title><style>body{color:#111}</style><p>Revisión comunitaria.</p>')
+    a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror),'TEMP_REPORT':str(report)})
     with connect(a.config['DATABASE']) as c:
         for name,role in [('owner','owner'),('member','member'),('reviewer','reviewer'),('reader','reader'),('temporary','member')]:
             c.execute('INSERT INTO users(username,name,password_hash,role,must_change,created) VALUES(?,?,?,?,?,?)',(name,name,generate_password_hash(PASS),role,int(name=='temporary'),now()))
@@ -56,6 +57,19 @@ def test_public_read_and_no_anonymous_mutation(app):
     assert c.get('/api/users').status_code==404
     assert c.get('/archivo-proton.html').status_code==404
     assert c.get('/editar/archivo-proton').status_code in [401,404]
+
+def test_temporary_report_is_public_isolated_and_not_indexed(app):
+    c=client(app)
+    page=c.get('/reporte-temporal')
+    assert page.status_code==200 and b'Reporte temporal' in page.data
+    assert page.headers['X-Robots-Tag']=='noindex, nofollow, noarchive'
+    policy=page.headers['Content-Security-Policy']
+    assert "default-src 'none'" in policy and "media-src data:" in policy and "connect-src 'none'" in policy
+    alias=c.get('/reporte_temporal')
+    assert alias.status_code==302 and alias.headers['Location']=='/reporte-temporal'
+    assert '/reporte-temporal' not in c.get('/sitemap.xml').text
+    robots=c.get('/robots.txt').text
+    assert 'Disallow: /reporte-temporal' in robots and 'Disallow: /reporte_temporal' in robots
 
 def test_csrf_and_origin(app):
     c=client(app,'owner');s=c.get('/api/session').json
