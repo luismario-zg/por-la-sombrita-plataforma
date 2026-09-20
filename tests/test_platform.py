@@ -66,7 +66,8 @@ def test_public_read_and_no_anonymous_mutation(app):
 def test_development_plan_is_public_and_report_is_isolated(app):
     c=client(app)
     page=c.get('/planeacion-desarrollo-plataforma')
-    assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data and b'Propuesta para discutir' in page.data and b'Lectura de prueba.' in page.data
+    assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data and b'Propuesta para discutir' in page.data and b'Alternativa de prueba.' in page.data
+    assert b'Lectura del rean' not in page.data and b'Qui\xc3\xa9n debe resolver' not in page.data
     assert 'microphone=(self)' in page.headers['Permissions-Policy']
     report=c.get('/planeacion-desarrollo-plataforma/informe')
     assert report.status_code==200 and b'Reporte temporal' in report.data

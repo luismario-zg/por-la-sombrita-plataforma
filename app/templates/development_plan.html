@@ -30,22 +30,13 @@
         <div><span class="plan-key">{{ item.key }}</span><h4>{{ item.title }}</h4></div>
         <span class="plan-status {{ item.status }}">{{ statuses[item.status] }}</span>
       </div>
-      <p class="plan-question"><strong>Pregunta:</strong> {{ item.question }}</p>
-      {% if item.analysis %}
-      <dl class="plan-detail-grid">
-        <div><dt>Clasificación principal</dt><dd>{{ item.classification }}</dd></div>
-        <div><dt>También implica</dt><dd>{{ item.dimensions or 'Sin cruces adicionales registrados.' }}</dd></div>
-        <div><dt>Lectura del reanálisis</dt><dd>{{ item.analysis }}</dd></div>
-        <div><dt>Siguiente paso según su tipo</dt><dd>{{ item.next_step }}</dd></div>
+      <dl class="plan-answer-context">
+        <div><dt>Pregunta</dt><dd>{{ item.question }}</dd></div>
+        {% if item.proposal %}
         <div><dt>Propuesta para discutir</dt><dd>{{ item.proposal }}</dd></div>
         <div><dt>Otras opciones o matices</dt><dd>{{ item.alternatives }}</dd></div>
-        <div><dt>Quién debe resolver</dt><dd>{{ item.resolver }}</dd></div>
-        <div><dt>Momento</dt><dd>{{ item.timing }}</dd></div>
-        <div><dt>Origen</dt><dd>{{ item.origin }}</dd></div>
-        <div><dt>Asuntos relacionados</dt><dd>{{ item.related_items or 'Condición transversal de calidad o planificación.' }}</dd></div>
+        {% endif %}
       </dl>
-      {% else %}<p class="metadata">Clasificación: {{ item.classification }} · Origen: {{ item.origin }}</p>{% endif %}
-      <p class="metadata">Actualización del registro: {{ item.updated }}</p>
 
       {% if item.events %}
       <details class="plan-updates"><summary>Seguimiento · {{ item.events|length }} registro{{ '' if item.events|length == 1 else 's' }}</summary>
@@ -54,25 +45,25 @@
       {% endif %}
 
       {% if item.responses %}
-      <div class="plan-responses"><h5>Respuestas</h5>
+      <details class="plan-responses"><summary>Respuestas anteriores · {{ item.responses|length }}</summary>
         {% for response in item.responses %}<article><div><strong>{{ response.author_name }}</strong> · <time datetime="{{ response.created }}">{{ response.created }}</time></div><p>{{ response.body }}</p></article>{% endfor %}
-      </div>
+      </details>
       {% endif %}
 
       {% if me and me.role in ['owner','admin','reviewer','member'] and not me.must_change %}
       <form class="plan-response-form" data-api="/api/development/items/{{ item.key }}/responses">
         <label for="respuesta-{{ item.key }}">{{ 'Agregar otra respuesta' if item.responses else 'Escribir una respuesta' }}
-          <textarea id="respuesta-{{ item.key }}" name="body" rows="5" maxlength="12000" required></textarea>
+          <textarea id="respuesta-{{ item.key }}" name="body" rows="3" maxlength="12000" required></textarea>
         </label>
         <div class="voice-row">
           <button type="button" class="small-button voice-button" aria-label="Grabar una respuesta para {{ item.key }}">🎙️ Dictar</button>
           <button type="button" class="small-button voice-cancel" hidden>Descartar</button>
           <span class="voice-timer" hidden>0:00</span>
           <span class="voice-status" role="status" aria-live="polite"></span>
+          <button type="submit" class="boton plan-save">Guardar <span>→</span></button>
         </div>
-        {% if not transcription_enabled %}<p class="form-note">El dictado todavía no está configurado en el servidor. Puedes escribir y guardar tu respuesta.</p>{% else %}<p class="form-note">El audio se usa para transcribir y no se conserva. Revisa el borrador antes de guardarlo.</p>{% endif %}
+        {% if not transcription_enabled %}<p class="form-note">El dictado todavía no está configurado.</p>{% else %}<p class="form-note">El audio se transcribe, no se conserva y no se guarda hasta que pulses Guardar.</p>{% endif %}
         <p class="form-error" role="alert"></p>
-        <button type="submit" class="boton">Guardar respuesta <span>→</span></button>
       </form>
       {% elif not me %}<p class="plan-login"><a href="/cuenta">Entra con tu cuenta para responder esta pregunta.</a></p>
       {% elif me.must_change %}<p class="plan-login"><a href="/cuenta">Cambia tu contraseña provisional para responder.</a></p>
