@@ -22,7 +22,7 @@ def now(): return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
 def connect(path):
     c=sqlite3.connect(path,timeout=15); c.row_factory=sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON');c.execute('PRAGMA journal_mode=WAL');c.execute('PRAGMA busy_timeout=15000')
+    c.execute('PRAGMA foreign_keys=ON');c.execute('PRAGMA busy_timeout=15000');c.execute('PRAGMA journal_mode=WAL')
     return c
 
 def db():
