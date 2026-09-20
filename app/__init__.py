@@ -55,7 +55,7 @@ def create_app(config=None):
         response.headers['Referrer-Policy']='strict-origin-when-cross-origin'
         response.headers['Cache-Control']='no-store'
         response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=()'
-        if request.endpoint=='development_report':
+        if request.endpoint=='development_report' and response.status_code<400:
             response.headers['Content-Security-Policy']="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'none'"
             response.headers['X-Frame-Options']='SAMEORIGIN'
             response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
@@ -66,6 +66,7 @@ def create_app(config=None):
         else:
             response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
         if request.endpoint=='development_plan':response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
+        if request.endpoint in ['development_plan','development_report']:response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         if request.path.startswith('/api/') or request.path in ['/cuenta','/administracion']:response.headers['X-Robots-Tag']='noindex, nofollow'
         return response
 
@@ -100,6 +101,11 @@ def create_app(config=None):
         if not isinstance(x,dict):abort(400,description='Solicitud inválida.')
         return x
 
+    def require_developer():
+        u=require('owner','admin','reviewer','member','reader')
+        if not u['developer_access']:abort(403,description='Esta sección requiere el permiso de Desarrollador.')
+        return u
+
     @app.get('/')
     def home():
         docs=db().execute('SELECT slug,title,intro,status,version FROM documents WHERE hidden=0 ORDER BY rowid').fetchall()
@@ -108,6 +114,7 @@ def create_app(config=None):
 
     @app.get('/planeacion-desarrollo-plataforma')
     def development_plan():
+        require_developer()
         rows=[dict(row) for row in db().execute('SELECT * FROM development_items ORDER BY sort_order,key')]
         responses={row['key']:[] for row in rows};events={row['key']:[] for row in rows}
         for response in db().execute('''SELECT r.*,u.name AS author_name FROM development_responses r
@@ -121,12 +128,19 @@ def create_app(config=None):
             group=next((x for x in categories if x['name']==row['classification']),None)
             if not group:group={'name':row['classification'],'items':[]};categories.append(group)
             row['responses']=responses[row['key']];row['events']=events[row['key']];group['items'].append(row)
+        priority='Ideas de desarrollo y configuración de la plataforma'
+        categories.sort(key=lambda group:(group['name']!=priority,min(item['sort_order'] for item in group['items'])))
+        for position,group in enumerate(categories):
+            group['priority']=group['name']==priority
+            group['label']='Pendientes para desarrollar la plataforma' if group['priority'] else group['name']
+            group['slug']='desarrollo-plataforma' if group['priority'] else 'categoria-'+str(position+1)
         counts={status:sum(1 for row in rows if row['status']==status) for status in PLAN_STATUSES}
         return render_template('development_plan.html',title='Planeación de desarrollo de plataforma',categories=categories,
             statuses=PLAN_STATUSES,counts=counts,total=len(rows),transcription_enabled=bool(app.config['TRANSCRIBE_API_KEY']))
 
     @app.get('/planeacion-desarrollo-plataforma/informe')
     def development_report():
+        require_developer()
         path=Path(app.config['DEVELOPMENT_REPORT'])
         if not path.is_file():abort(404)
         return send_file(path,mimetype='text/html',conditional=True,max_age=0)
@@ -281,7 +295,7 @@ def create_app(config=None):
     @app.get('/administracion')
     def admin():
         require('owner')
-        rows=db().execute('SELECT id,username,name,role,active,membership,membership_reference FROM users ORDER BY id').fetchall()
+        rows=db().execute('SELECT id,username,name,role,active,membership,membership_reference,developer_access FROM users ORDER BY id').fetchall()
         return render_template('admin.html',title='Administrar cuentas y permisos',users=rows)
 
     @app.get('/participa')
@@ -294,7 +308,7 @@ def create_app(config=None):
             limited('anon:'+hashlib.sha256(request.headers.get('CF-Connecting-IP',request.remote_addr or '').encode()).hexdigest(),180,3600)
             token,csrf=new_session()
         else:csrf=g.session['csrf']
-        response=jsonify(csrf=csrf,user=dict(id=u['id'],name=u['name'],role=u['role'],must_change=bool(u['must_change'])) if u else None)
+        response=jsonify(csrf=csrf,user=dict(id=u['id'],name=u['name'],role=u['role'],developer=bool(u['developer_access']),must_change=bool(u['must_change'])) if u else None)
         return set_cookie(response,token) if token else response
 
     @app.post('/api/login')
@@ -325,7 +339,7 @@ def create_app(config=None):
 
     @app.post('/api/development/items/<key>/responses')
     def save_development_response(key):
-        u=require('owner','admin','reviewer','member');message=field(body(),'body',12000);limited('development-response:'+str(u['id']),60,3600)
+        u=require_developer();message=field(body(),'body',12000);limited('development-response:'+str(u['id']),60,3600)
         c=db();c.execute('BEGIN IMMEDIATE');item=c.execute('SELECT * FROM development_items WHERE key=?',(key,)).fetchone()
         if not item:abort(404,description='La pregunta de planeación no existe.')
         stamp=now();cur=c.execute('INSERT INTO development_responses(item_key,author,body,created) VALUES(?,?,?,?)',(key,u['id'],message,stamp))
@@ -335,7 +349,7 @@ def create_app(config=None):
 
     @app.post('/api/development/transcribe')
     def development_transcribe():
-        u=require('owner','admin','reviewer','member');limited('development-transcribe:'+str(u['id']),30,3600)
+        u=require_developer();limited('development-transcribe:'+str(u['id']),30,3600)
         audio=request.files.get('audio')
         if not audio:abort(400,description="Falta el archivo de audio (campo 'audio').")
         mimetype=(audio.mimetype or '').split(';',1)[0].lower();payload=audio.read(app.config['TRANSCRIBE_MAX_BYTES']+1)
@@ -442,13 +456,13 @@ def create_app(config=None):
 
     @app.post('/api/users/<int:ident>')
     def permissions(ident):
-        u=require('owner');data=body();role=field(data,'role',20);membership=field(data,'membership',20);ref=field(data,'reference',1000,False);active=data.get('active')
-        if role not in ROLES or membership not in ['pending','official'] or not isinstance(active,bool):abort(400,description='Permisos inválidos.')
+        u=require('owner');data=body();role=field(data,'role',20);membership=field(data,'membership',20);ref=field(data,'reference',1000,False);active=data.get('active');developer=data.get('developer_access')
+        if role not in ROLES or membership not in ['pending','official'] or not isinstance(active,bool) or not isinstance(developer,bool):abort(400,description='Permisos inválidos.')
         if membership=='official' and not ref:abort(400,description='Registra la referencia de aprobación de membresía.')
         c=db();c.execute('BEGIN IMMEDIATE');target=c.execute('SELECT * FROM users WHERE id=?',(ident,)).fetchone()
         if not target:abort(404)
         if target['role']=='owner' and target['active'] and (role!='owner' or not active) and c.execute("SELECT COUNT(*) FROM users WHERE role='owner' AND active=1").fetchone()[0]<=1:abort(409,description='Debe quedar al menos un administrador general activo.')
-        c.execute('UPDATE users SET role=?,membership=?,membership_reference=?,active=? WHERE id=?',(role,membership,ref,int(active),ident));c.execute('DELETE FROM sessions WHERE user_id=?',(ident,));event(c,u['id'],'permissions',f"Permisos actualizados para la cuenta {ident}.");c.commit();return jsonify(ok=True)
+        c.execute('UPDATE users SET role=?,membership=?,membership_reference=?,active=?,developer_access=? WHERE id=?',(role,membership,ref,int(active),int(developer),ident));c.execute('DELETE FROM sessions WHERE user_id=?',(ident,));event(c,u['id'],'permissions',f"Permisos actualizados para la cuenta {ident}; desarrollador={int(developer)}.");c.commit();return jsonify(ok=True)
 
     @app.post('/api/users/<int:ident>/reset-password')
     def reset_password(ident):
@@ -459,12 +473,12 @@ def create_app(config=None):
         return jsonify(password=provisional)
 
     @app.get('/robots.txt')
-    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /planeacion-desarrollo-plataforma/informe\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
+    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /planeacion-desarrollo-plataforma\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
 
     @app.get('/sitemap.xml')
     def sitemap():
         from xml.sax.saxutils import escape
-        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa','/planeacion-desarrollo-plataforma']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
+        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
         return app.response_class('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+escape(app.config['BASE_URL']+p)+'</loc></url>' for p in paths)+'</urlset>',mimetype='application/xml')
 
     @app.get('/llms.txt')

@@ -15,12 +15,13 @@ def app(tmp_path):
     common={'dimensions':'Desarrollo','analysis':'Lectura de prueba.','next_step':'Siguiente paso de prueba.','proposal':'Propuesta de prueba.','alternatives':'Alternativa de prueba.','resolver':'La comunidad.','timing':'Antes de implementar.','origin':'Prueba','related_items':'R01'}
     index=tmp_path/'planeacion.json';index.write_text(json.dumps({'version':2,'items':[
         {'key':'D01','title':'Participación anónima','question':'¿Cómo se participa?','classification':'Directrices y valores',**common},
-        {'key':'D25','title':'Playlist colectiva','question':'¿Quién la administra?','classification':'Desarrollo',**common},
+        {'key':'D25','title':'Playlist colectiva','question':'¿Quién la administra?','classification':'Ideas de desarrollo y configuración de la plataforma',**common},
     ]}))
     a=create_app({'TESTING':True,'DATABASE':str(tmp_path/'prueba.sqlite3'),'BASE_URL':'http://localhost','COOKIE_NAME':'pls-test','COOKIE_SECURE':False,'AI_ENABLED':True,'PROTON_MIRROR':str(mirror),'DEVELOPMENT_REPORT':str(report),'DEVELOPMENT_INDEX':str(index),'TRANSCRIBE_API_KEY':'test-key'})
     with connect(a.config['DATABASE']) as c:
         for name,role in [('owner','owner'),('member','member'),('reviewer','reviewer'),('reader','reader'),('temporary','member')]:
             c.execute('INSERT INTO users(username,name,password_hash,role,must_change,created) VALUES(?,?,?,?,?,?)',(name,name,generate_password_hash(PASS),role,int(name=='temporary'),now()))
+        c.execute("UPDATE users SET developer_access=1 WHERE username='owner'")
         c.execute('INSERT INTO documents(slug,title,version,html,updated) VALUES(?,?,1,?,?)',('plan','Plan',CONTENT,now()))
         c.execute('INSERT INTO revisions(document,version,html,status,reason,created) VALUES(?,1,?,?,?,?)',('plan',CONTENT,'proposal','Inicial',now()))
         c.execute("INSERT INTO documents(slug,title,version,html,updated,hidden) VALUES('archivo-proton','Archivo Proton',1,'<h2 id=\"resource\">Recurso</h2>',?,1)",(now(),))
@@ -63,11 +64,16 @@ def test_public_read_and_no_anonymous_mutation(app):
     assert c.get('/archivo-proton.html').status_code==404
     assert c.get('/editar/archivo-proton').status_code in [401,404]
 
-def test_development_plan_is_public_and_report_is_isolated(app):
-    c=client(app)
+def test_development_plan_requires_developer_and_report_is_isolated(app):
+    assert client(app).get('/planeacion-desarrollo-plataforma').status_code==401
+    assert client(app,'member').get('/planeacion-desarrollo-plataforma').status_code==403
+    c=client(app,'owner')
     page=c.get('/planeacion-desarrollo-plataforma')
     assert page.status_code==200 and b'Planeaci' in page.data and b'D01' in page.data and b'Propuesta para discutir' in page.data and b'Alternativa de prueba.' in page.data
     assert b'Lectura del rean' not in page.data and b'Qui\xc3\xa9n debe resolver' not in page.data
+    assert b'Pendientes para desarrollar la plataforma' in page.data and b'role="tablist"' in page.data
+    assert b'id="tab-desarrollo-plataforma"' in page.data and b'id="panel-desarrollo-plataforma"' in page.data
+    assert b'aria-selected="true" class="priority"' in page.data
     assert 'microphone=(self)' in page.headers['Permissions-Policy']
     report=c.get('/planeacion-desarrollo-plataforma/informe')
     assert report.status_code==200 and b'Reporte temporal' in report.data
@@ -78,29 +84,31 @@ def test_development_plan_is_public_and_report_is_isolated(app):
     for alias in ['/reporte-temporal','/reporte_temporal']:
         response=c.get(alias);assert response.status_code==302 and response.headers['Location']=='/planeacion-desarrollo-plataforma'
     sitemap=c.get('/sitemap.xml').text
-    assert '/planeacion-desarrollo-plataforma</loc>' in sitemap and '/planeacion-desarrollo-plataforma/informe' not in sitemap
+    assert '/planeacion-desarrollo-plataforma' not in sitemap
     robots=c.get('/robots.txt').text
-    assert 'Disallow: /planeacion-desarrollo-plataforma/informe' in robots
+    assert 'Disallow: /planeacion-desarrollo-plataforma' in robots
 
 def test_development_responses_require_account_and_preserve_history(app):
     anonymous=client(app)
     assert post(anonymous,'/api/development/items/D01/responses',{'body':'Una respuesta.'}).status_code==401
     reader=client(app,'reader')
     assert post(reader,'/api/development/items/D01/responses',{'body':'No debe guardarse.'}).status_code==403
-    member=client(app,'member')
-    first=post(member,'/api/development/items/D01/responses',{'body':'Primera respuesta revisable.'})
-    second=post(member,'/api/development/items/D01/responses',{'body':'Segunda respuesta con más detalle.'})
+    member=client(app,'member');assert post(member,'/api/development/items/D01/responses',{'body':'Tampoco debe guardarse.'}).status_code==403
+    owner=client(app,'owner')
+    assert 'Desarrollador: puede ver y responder' in owner.get('/administracion').text
+    first=post(owner,'/api/development/items/D01/responses',{'body':'Primera respuesta revisable.'})
+    second=post(owner,'/api/development/items/D01/responses',{'body':'Segunda respuesta con más detalle.'})
     assert first.status_code==201 and second.status_code==201
     with connect(app.config['DATABASE']) as database:
         assert database.execute("SELECT status FROM development_items WHERE key='D01'").fetchone()[0]=='answered'
         assert database.execute("SELECT COUNT(*) FROM development_responses WHERE item_key='D01'").fetchone()[0]==2
-    page=anonymous.get('/planeacion-desarrollo-plataforma')
+    page=owner.get('/planeacion-desarrollo-plataforma')
     assert b'Primera respuesta revisable.' in page.data and b'Segunda respuesta con m' in page.data
 
 def test_voice_transcription_returns_editable_draft_without_saving(app,monkeypatch):
     monkeypatch.setattr('app.transcribe_audio',lambda payload,mimetype,config:'Texto transcrito para revisar.')
-    member=client(app,'member');session=member.get('/api/session').json
-    response=member.post('/api/development/transcribe',data={'audio':(io.BytesIO(b'a'*1500),'respuesta.webm')},content_type='multipart/form-data',headers={'Origin':'http://localhost','X-CSRF-Token':session['csrf']})
+    owner=client(app,'owner');session=owner.get('/api/session').json
+    response=owner.post('/api/development/transcribe',data={'audio':(io.BytesIO(b'a'*1500),'respuesta.webm')},content_type='multipart/form-data',headers={'Origin':'http://localhost','X-CSRF-Token':session['csrf']})
     assert response.status_code==200 and response.json=={'text':'Texto transcrito para revisar.'}
     with connect(app.config['DATABASE']) as database:assert database.execute('SELECT COUNT(*) FROM development_responses').fetchone()[0]==0
 
@@ -133,13 +141,14 @@ def test_permissions_are_enforced_and_last_owner_kept(app):
     c=client(app,'member');assert create_thread(c).status_code==201
     assert save_review(c).status_code==403
     assert post(c,'/api/threads/1/state',{'action':'archive','summary':'No'}).status_code==403
-    assert post(c,'/api/users/2',{'role':'owner','active':True,'membership':'pending'}).status_code==403
+    assert post(c,'/api/users/2',{'role':'owner','active':True,'membership':'pending','developer_access':False}).status_code==403
     r=client(app,'reader');assert create_thread(r).status_code==403
     owner=client(app,'owner')
-    assert post(owner,'/api/users/1',{'role':'member','active':True,'membership':'pending'}).status_code==409
-    assert post(owner,'/api/users/2',{'role':'reader','active':True,'membership':'pending'}).status_code==200
+    assert post(owner,'/api/users/1',{'role':'member','active':True,'membership':'pending','developer_access':True}).status_code==409
+    assert post(owner,'/api/users/2',{'role':'reader','active':True,'membership':'pending','developer_access':True}).status_code==200
     assert create_thread(c).status_code==401 # Sus sesiones fueron revocadas.
-    assert post(owner,'/api/users/3',{'role':'reviewer','active':True,'membership':'official','reference':''}).status_code==400
+    assert client(app,'member').get('/planeacion-desarrollo-plataforma').status_code==200
+    assert post(owner,'/api/users/3',{'role':'reviewer','active':True,'membership':'official','reference':'','developer_access':False}).status_code==400
 
 def test_validates_anchor_and_document_revision(app):
     c=client(app,'member')

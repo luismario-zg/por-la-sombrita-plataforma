@@ -18,7 +18,7 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Administrar permisos y accesos; registrar membresía oficial de forma independiente.
 - Navegar en modo público y de solo lectura todas las carpetas y archivos del espacio compartido `Por La Sombrita MTY General` en Proton Drive.
 - Abrir una discusión sobre una carpeta o un archivo completo desde cualquier nivel del árbol. Los documentos nativos que no se pueden descargar muestran su ruta y el acceso convencional a Proton.
-- Consultar la planeación de desarrollo, guardar respuestas con historial y mantener visibles preguntas pendientes, trabajo en proceso e implementaciones terminadas.
+- Con permiso de Desarrollador, consultar la planeación técnica, guardar respuestas con historial y mantener visibles preguntas pendientes, trabajo en proceso e implementaciones terminadas.
 - Dictar una respuesta desde el micrófono para obtener un borrador editable; el audio no se conserva y la transcripción nunca se guarda automáticamente.
 
 No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El administrador general inicial es Luis Mario; las otras ocho cuentas iniciales son participantes. Las credenciales se generan localmente y nunca están incluidas en este repositorio.

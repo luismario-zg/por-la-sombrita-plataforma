@@ -40,6 +40,9 @@ def init_db(path):
         document_columns={r['name'] for r in c.execute('PRAGMA table_info(documents)')}
         if 'hidden' not in document_columns:
             c.execute('ALTER TABLE documents ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0')
+        user_columns={r['name'] for r in c.execute('PRAGMA table_info(users)')}
+        if 'developer_access' not in user_columns:
+            c.execute('ALTER TABLE users ADD COLUMN developer_access INTEGER NOT NULL DEFAULT 0 CHECK(developer_access IN (0,1))')
         thread_columns={r['name'] for r in c.execute('PRAGMA table_info(threads)')}
         if 'target_type' not in thread_columns:
             c.execute("ALTER TABLE threads ADD COLUMN target_type TEXT NOT NULL DEFAULT 'document'")

@@ -42,10 +42,18 @@ Un solo consumidor atiende la cola. Al reiniciarlo, los trabajos que quedaron en
 ## Ciclo de planeación del desarrollo
 
 `/planeacion-desarrollo-plataforma` presenta el informe completo y las preguntas
-estructuradas. La lectura y las respuestas guardadas son públicas; responder exige
-una cuenta participante con contraseña definitiva. Cada guardado añade una nueva
-respuesta, conserva autor y fecha y mueve el item a `answered`. No se sobrescribe el
-historial.
+estructuradas únicamente a cuentas con el permiso adicional `developer_access`.
+Ese permiso no sustituye el rol general ni la membresía. Cada guardado añade una
+nueva respuesta, conserva autor y fecha y mueve el item a `answered`. No se
+sobrescribe el historial.
+
+El administrador general puede cambiar el permiso desde `/administracion`. Para la
+asignación inicial o una recuperación operativa:
+
+```bash
+PLS_DATA_DIR=/home/claude/.local/share/pls-plataforma \
+  .venv/bin/python scripts/asignar_desarrollador.py luismario --exclusive
+```
 
 Cuando una persona avise que terminó de responder, obtener el estado para revisión:
 

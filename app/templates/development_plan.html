@@ -19,11 +19,14 @@
 </div></section>
 
 <section class="seccion plan-answers" id="respuestas"><div class="contenedor">
-  <div class="seccion-titulo"><div><span class="eyebrow">Decisiones y aclaraciones</span><h2>Respuestas guardadas</h2></div><p>La lectura es pública. Para responder necesitas entrar con una cuenta participante. Cada guardado conserva autor, fecha e historial.</p></div>
+  <div class="seccion-titulo"><div><span class="eyebrow">Decisiones y aclaraciones</span><h2>Respuestas guardadas</h2></div><p>Solo las cuentas con permiso de Desarrollador pueden consultar y responder esta planeación. Cada guardado conserva autor, fecha e historial.</p></div>
   {% if not categories %}<div class="empty">Todavía no se ha cargado el índice de preguntas del plan.</div>{% endif %}
+  {% if categories %}<nav class="plan-category-tabs" role="tablist" aria-label="Categorías de decisiones">
+    {% for category in categories %}<button type="button" role="tab" id="tab-{{ category.slug }}" aria-controls="panel-{{ category.slug }}" aria-selected="{{ 'true' if loop.first else 'false' }}" class="{{ 'priority' if category.priority else '' }}">{{ category.label }} <span>{{ category['items']|length }}</span></button>{% endfor %}
+  </nav>{% endif %}
   {% for category in categories %}
-  <section class="plan-category" aria-labelledby="categoria-{{ loop.index }}">
-    <h3 id="categoria-{{ loop.index }}">{{ category.name }}</h3>
+  <section class="plan-category" id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}" data-plan-panel {% if not loop.first %}hidden{% endif %}>
+    <h3>{{ category.label }}</h3>
     {% for item in category['items'] %}
     <article class="plan-item" id="{{ item.key }}">
       <div class="plan-item-head">

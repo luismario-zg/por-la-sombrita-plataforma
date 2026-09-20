@@ -15,6 +15,7 @@ No publicar vulnerabilidades con contraseñas, tokens, base de datos ni informac
 - Conservación de mensajes, anclas originales, versiones y eventos administrativos; sin borrado destructivo en la interfaz del prototipo.
 - IA solo por solicitud de un revisor autorizado, consumidor único y modelo fijado. Herramientas de shell, aplicaciones, MCP configurado, navegador, plugins y multiagente deshabilitados; sandbox de solo lectura, carpeta temporal, timeout y salida estructurada validada. Los comentarios son datos no confiables, no instrucciones.
 - El dictado de planeación requiere cuenta participante y CSRF, limita tamaño y frecuencia, mantiene el audio acotado en memoria y lo envía directamente al proveedor configurado; no conserva grabaciones. La transcripción vuelve al navegador como borrador editable y solo se publica al guardar la respuesta por separado.
+- La planeación de desarrollo, su informe, respuestas y dictado requieren el permiso adicional de Desarrollador. La ruta no aparece en navegación, sitemap o resultados públicos para otras cuentas; el servidor verifica el permiso en cada lectura y mutación.
 - El archivo de Proton usa una raíz allowlisted y exclusión previa por ruta, tipo y patrones sensibles. La aplicación no enumera `/my-files`, no indexa carpetas de promotores ni expone rutas internas del servidor.
 - Las descargas vuelven a resolver el archivo dentro del espejo, rechazan enlaces simbólicos y no renderizan HTML o SVG arbitrario en el origen autenticado. Las vistas permitidas reciben una política de contenido aislada.
 
