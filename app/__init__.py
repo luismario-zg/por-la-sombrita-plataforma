@@ -96,7 +96,7 @@ def create_app(config=None):
     def temporary_report():
         path=Path(app.config['TEMP_REPORT'])
         if not path.is_file():abort(404)
-        return send_file(path,mimetype='text/html; charset=utf-8',conditional=True,max_age=0)
+        return send_file(path,mimetype='text/html',conditional=True,max_age=0)
 
     @app.get('/reporte_temporal')
     def temporary_report_alias():return redirect('/reporte-temporal',code=302)
