@@ -10,7 +10,9 @@ planeación ni convierten una respuesta individual en ratificación comunitaria.
 | Archivo | Ruta prevista | Propósito |
 |---|---|---|
 | `contenido/evolucion/directrices.html` | `/directrices.html` | Fichas de principio, intención, ejemplo, alcance y estado, precedidas por el aviso para interpretar el espíritu sin alterar texto ni decisiones. |
-| `contenido/evolucion/conocimiento.html` | `/conocimiento.html` | Entrada única dividida en **Comunidades Abiertas** y **Comunidad PLS**, con historia, fuentes, archivo público y estado técnico documentado. |
+| `contenido/evolucion/conocimiento.html` | `/conocimiento.html` | Acceso a los dos recorridos; conserva las anclas de la página original y su historial. |
+| `contenido/evolucion/comunidades-abiertas.html` | `/comunidades-abiertas.html` | LABNL, su propósito, orientaciones generales para las comunidades y referencias sobre colaboración abierta. |
+| `contenido/evolucion/comunidad-pls.html` | `/comunidad-pls.html` | Historia, investigación, archivos y recursos de Por la Sombrita. |
 | `contenido/evolucion/manual.html` | `/manual.html` | Versión ampliada del manual. Conserva anclas históricas y añade decisiones, conflictos, convivencia, horizontalidad, comités, redes, arte, estándares y réplica. |
 | `scripts/importar_evolucion.py` | Operación local | Valida, muestra cambios y, solo con opciones explícitas, crea nuevas revisiones o documentos. Puede crear el hilo autorizado de D07 y emitir el seed D14. |
 
