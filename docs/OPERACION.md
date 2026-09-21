@@ -131,6 +131,19 @@ contenido; importar requiere base explícita, respaldo confirmado y `--apply`. A
 desplegar, revisar además que `gh auth status` corresponda a la cuenta y repositorio
 esperados y que las pruebas no dependan de red ni credenciales reales.
 
+## Edición de documentos
+
+Las cuentas con permiso de Editor usan Markdown desde `/editar/<documento>`. El
+servidor convierte el borrador, elimina HTML no permitido y guarda únicamente el HTML
+sanitizado en la nueva revisión. La vista previa llama al mismo conversor y nunca
+modifica el documento. Los encabezados `##` y `###` pueden incluir anclas
+`{#identificador}`; conservarlas mantiene estables las secciones, enlaces e hilos.
+
+El endpoint de guardado todavía acepta el campo HTML anterior para compatibilidad con
+clientes existentes, con la misma sanitización. La interfaz publicada ya no lo expone.
+Marcar una versión oficial exige una referencia; los documentos del núcleo requieren
+además un rol administrativo. Una edición nunca archiva automáticamente su discusión.
+
 ## Respaldos y restauración
 
 Ejecutar `.venv/bin/python scripts/respaldar.py`. Usa la API de backup de SQLite para incluir de forma consistente el estado WAL y guarda la copia 0600 en la carpeta privada `backups/`.

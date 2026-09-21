@@ -14,7 +14,7 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Elaborar una ficha por hilo: tema en una frase, pregunta concreta, contexto, redacción actual, redacción propuesta, resumen, coincidencias, desacuerdos, pendientes y mensajes de respaldo.
 - Pedir una ficha con Luna en `high` mediante la sesión local de Codex; corregirla y aprobarla como base de deliberación. Nuevos mensajes o cambios del documento vuelven obsoleta la ficha.
 - Proponer cierre y archivar con resumen del consenso, con edición vinculada o sin cambios. Reabrir con motivo, conservando cierres y fichas anteriores.
-- Editar documentos con control de versión y motivo; marcar oficial solo al registrar la referencia de aprobación.
+- Proponer ediciones en Markdown con barra de formato y vista previa segura; guardar cada cambio como una nueva versión con motivo y, para marcarlo oficial, referencia de aprobación.
 - Administrar permisos y accesos; registrar membresía oficial de forma independiente.
 - Navegar en modo público y de solo lectura todas las carpetas y archivos del espacio compartido `Por La Sombrita MTY General` en Proton Drive.
 - Abrir una discusión sobre una carpeta o un archivo completo desde cualquier nivel del árbol. Los documentos nativos que no se pueden descargar muestran su ruta y el acceso convencional a Proton.

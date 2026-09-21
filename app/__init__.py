@@ -10,6 +10,7 @@ from .assistant import assistant as assistant_bp, SCHEMA_SQL as ASSISTANT_SCHEMA
 from .improvements import improvements as improvements_bp, SCHEMA_SQL as IMPROVEMENTS_SCHEMA,validate_guest_improvement,publish_guest_improvement
 from .participation import register_participation,register_guest_target,editor_allowed,moderator_allowed,PROTECTED_DOCUMENTS
 from .community import bp as community,init_community_schema,validate_guest_target,publish_guest_comment
+from .editor_markdown import MarkdownError,html_to_markdown,markdown_to_html
 
 def create_app(config=None):
     app=Flask(__name__)
@@ -465,16 +466,27 @@ def create_app(config=None):
         if not editor_allowed(u,slug):abort(403,description='La edición requiere permiso de Editor; el núcleo también requiere administración.')
         doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
         if not doc or doc['hidden']:abort(404)
-        return render_template('editor.html',title='Editar '+doc['title'],doc=doc,source_thread=request.args.get('hilo',''))
+        return render_template('editor.html',title='Editar '+doc['title'],doc=doc,markdown=html_to_markdown(doc['html']),source_thread=request.args.get('hilo',''))
+
+    @app.post('/api/documents/<slug>/preview-markdown')
+    def preview_document_markdown(slug):
+        u=require()
+        if not editor_allowed(u,slug):abort(403,description='La vista previa requiere permiso de Editor; el núcleo también requiere administración.')
+        doc=db().execute('SELECT hidden FROM documents WHERE slug=?',(slug,)).fetchone()
+        if not doc or doc['hidden']:abort(404)
+        try:preview=markdown_to_html(field(body(),'markdown',180000))
+        except MarkdownError as error:abort(400,description=str(error))
+        return jsonify(html=preview)
 
     @app.post('/api/documents/<slug>')
     def edit_document(slug):
         u=require()
         if not editor_allowed(u,slug):abort(403,description='La edición requiere permiso de Editor; el núcleo también requiere administración.')
-        data=body();version=number(data,'version');reason=field(data,'reason',2000);status=field(data,'status',20);ref=field(data,'reference',1000,False);content=field(data,'html',180000)
+        data=body();version=number(data,'version');reason=field(data,'reason',2000);status=field(data,'status',20);ref=field(data,'reference',1000,False)
         if status not in ['proposal','official']:abort(400,description='Estado documental inválido.')
         if status=='official' and not ref:abort(400,description='Indica el acta o referencia que respalda la aprobación oficial.')
-        cleaned=clean_html(content)
+        try:cleaned=markdown_to_html(field(data,'markdown',180000)) if 'markdown' in data else clean_html(field(data,'html',180000))
+        except MarkdownError as error:abort(400,description=str(error))
         if not sections(cleaned):abort(400,description='El documento necesita al menos una sección.')
         c=db();c.execute('BEGIN IMMEDIATE');doc=c.execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
         if not doc or doc['hidden']:abort(404)

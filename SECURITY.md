@@ -4,6 +4,11 @@ No publicar vulnerabilidades con contraseñas, tokens, base de datos ni informac
 
 ## Controles implementados
 
+- El editor recibe Markdown, lo convierte en el servidor y aplica la misma lista
+  permitida de etiquetas, atributos y protocolos que protege las ediciones HTML. La
+  vista previa devuelve únicamente HTML sanitizado; scripts, URLs `javascript:`,
+  imágenes incrustadas y encabezados de página se eliminan o rechazan antes de guardar.
+
 - Contraseñas con scrypt y sal individual, sesiones aleatorias almacenadas como SHA-256, cookies HttpOnly/Secure/SameSite y cambio obligatorio de claves provisionales.
 - Rotación de sesión al entrar y cambiar contraseña; revocación de sesiones al cambiar permisos, desactivar una cuenta o restablecer su contraseña.
 - Origin exacto, contenido JSON y token CSRF para cada mutación; sin CORS permisivo.

@@ -73,7 +73,7 @@ controlada. Falta:
 
 ## Experiencia, accesibilidad y gobernanza
 
-- [ ] Editor visual y comparación de versiones lado a lado.
+- [ ] Comparación de versiones lado a lado y diferencias resaltadas; la edición guiada en Markdown con vista previa ya está disponible.
 - [ ] Menciones y seguimiento de discusiones; las notificaciones actuales cubren tareas.
 - [ ] Verificación formal de actas y membresías, si la comunidad acuerda un procedimiento.
 - [ ] Reanclaje asistido cuando un texto se mueve; toda ambigüedad requiere revisión humana.
