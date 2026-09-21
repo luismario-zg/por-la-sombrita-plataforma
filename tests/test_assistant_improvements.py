@@ -75,7 +75,7 @@ def test_github_sync_pages_all_comments_pushes_outbox_and_preserves_local_progre
     def fake(args,payload=None):
         calls.append((args,payload))
         if args[1].endswith('/comments?per_page=100'):
-            assert '--paginate' in args and '--slurp' in args
+            assert '--paginate' in args and '--slurp' not in args
             return [[{'id':901,'body':'Comentario remoto uno','user':{'login':'uno'},'created_at':'2026-09-21T00:00:00Z'}],
                 [{'id':902,'body':'Comentario remoto dos','user':{'login':'dos'},'created_at':'2026-09-21T00:01:00Z'}]]
         if args[1].endswith('/comments') and '--method' in args:return {'id':999}
@@ -156,3 +156,9 @@ def test_voice_requires_verified_membership(app,monkeypatch):
     assert send().status_code==403
     with connect(app.config['DATABASE']) as connection:connection.execute("UPDATE users SET membership='official' WHERE username='member'")
     assert send().status_code==200
+
+def test_github_pagination_supports_installed_cli_without_slurp(monkeypatch):
+    from types import SimpleNamespace
+    from app.improvements import github_paginated
+    monkeypatch.setattr('app.improvements.subprocess.run',lambda *a,**kw:SimpleNamespace(returncode=0,stdout='[{"id":1}]\n[{"id":2}]\n'))
+    assert github_paginated(['api','repos/example/example/issues/1/comments'])==[{'id':1},{'id':2}]

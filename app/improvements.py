@@ -98,12 +98,21 @@ def github(args,payload=None):
     if payload is not None:command+=['--input','-']
     result=subprocess.run(command,input=json.dumps(payload) if payload is not None else None,capture_output=True,text=True,timeout=40)
     if result.returncode:raise RuntimeError('GitHub no pudo completar la sincronización. Revisa permisos o disponibilidad e inténtalo de nuevo.')
-    return json.loads(result.stdout) if result.stdout.strip() else {}
+    raw=result.stdout.strip()
+    if '--paginate' in args:
+        # Versiones antiguas de gh no tienen --slurp: emiten objetos JSON
+        # consecutivos. Decodificar cada página sin depender de una actualización.
+        decoder=json.JSONDecoder();pages=[];position=0
+        while position<len(raw):
+            page,position=decoder.raw_decode(raw,position);pages.append(page)
+            while position<len(raw) and raw[position].isspace():position+=1
+        return pages
+    return json.loads(raw) if raw else {}
 
 
 def github_paginated(args):
     """Devuelve una sola lista aunque gh produzca varias páginas JSON."""
-    pages=github([*args,'--paginate','--slurp'])
+    pages=github([*args,'--paginate'])
     if not isinstance(pages,list):raise RuntimeError('GitHub devolvió una página inválida.')
     if pages and all(isinstance(page,list) for page in pages):return [item for page in pages for item in page]
     return pages
