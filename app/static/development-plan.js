@@ -23,7 +23,7 @@ async function transcribe(state,blob){
   try{
     const session=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'}).then(async r=>{const body=await r.json();if(!r.ok)throw new Error(body.error||'No se pudo preparar la sesión.');return body;});
     const data=new FormData();const extension=blob.type.includes('mp4')?'m4a':'webm';data.append('audio',blob,'respuesta.'+extension);
-    const response=await fetch('/api/development/transcribe',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrf},body:data});
+    const response=await fetch(form.dataset.transcribeUrl||'/api/development/transcribe',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrf},body:data});
     const result=await response.json();if(!response.ok)throw new Error(result.error||'No se pudo transcribir la grabación.');
     const draftUnchanged=input.value===original;input.value=input.value?input.value.trimEnd()+' '+result.text:result.text;
     input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();input.setSelectionRange(input.value.length,input.value.length);
@@ -53,7 +53,7 @@ async function startVoice(form){
     state.interval=setInterval(()=>{const seconds=Math.floor((Date.now()-state.started)/1000);timer.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');if(seconds>=180&&recorder.state==='recording')recorder.stop();},500);
   }catch(error){stopTracks(stream);activeVoice=null;voiceMessage(form,error.name==='NotAllowedError'?'Permiso de micrófono denegado. Habilítalo desde el candado del navegador.':error.name==='NotFoundError'?'No se encontró un micrófono.':'No se pudo iniciar el micrófono: '+error.message);}
 }
-document.querySelectorAll('.plan-response-form').forEach(form=>{
+document.querySelectorAll('.plan-response-form,.voice-enabled').forEach(form=>{
   form.querySelector('.voice-button')?.addEventListener('click',()=>{
     if(activeVoice?.form===form&&activeVoice.recorder.state==='recording')activeVoice.recorder.stop();else void startVoice(form);
   });
@@ -62,7 +62,7 @@ document.querySelectorAll('.plan-response-form').forEach(form=>{
   });
 });
 document.addEventListener('submit',event=>{
-  if(event.target.matches('.plan-response-form')&&(activeVoice||transcribingForm)){event.preventDefault();event.stopImmediatePropagation();voiceMessage(event.target,'Termina la grabación o transcripción antes de guardar.');}
+  if(event.target.matches('.plan-response-form,.voice-enabled')&&(activeVoice||transcribingForm)){event.preventDefault();event.stopImmediatePropagation();voiceMessage(event.target,'Termina la grabación o transcripción antes de guardar.');}
 },true);
 
 const planTabs=[...document.querySelectorAll('.plan-category-tabs [role=tab]')];

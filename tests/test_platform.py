@@ -107,6 +107,7 @@ def test_development_responses_require_account_and_preserve_history(app):
 
 def test_voice_transcription_returns_editable_draft_without_saving(app,monkeypatch):
     monkeypatch.setattr('app.transcribe_audio',lambda payload,mimetype,config:'Texto transcrito para revisar.')
+    with connect(app.config['DATABASE']) as database:database.execute("UPDATE users SET membership='official',membership_reference='Aprobación ficticia de prueba' WHERE username='owner'")
     owner=client(app,'owner');session=owner.get('/api/session').json
     response=owner.post('/api/development/transcribe',data={'audio':(io.BytesIO(b'a'*1500),'respuesta.webm')},content_type='multipart/form-data',headers={'Origin':'http://localhost','X-CSRF-Token':session['csrf']})
     assert response.status_code==200 and response.json=={'text':'Texto transcrito para revisar.'}

@@ -8,7 +8,8 @@ from flask import current_app, g, abort, request
 
 ROLES={'owner':'Administrador general','admin':'Administrador','reviewer':'Revisor','member':'Participante','reader':'Solo lectura'}
 STATES={'open':'Abierta','closing':'Cierre propuesto','archived':'Archivada'}
-THREAD_SELECT='''SELECT t.*, u.name AS author_name, d.title AS base_document_title,
+THREAD_SELECT='''SELECT t.*, COALESCE(ga.display_name,u.name) AS author_name,
+CASE WHEN ga.id IS NULL THEN 0 ELSE 1 END AS guest_author, d.title AS base_document_title,
 CASE WHEN t.target_type='drive' THEN di.name ELSE d.title END AS document_title,
 CASE WHEN t.target_type='drive' THEN di.version ELSE d.version END AS current_version,
 CASE WHEN t.target_type='drive' THEN di.kind ELSE 'document' END AS target_kind,
@@ -16,7 +17,8 @@ CASE WHEN t.target_type='drive' THEN di.path ELSE '' END AS resource_path,
 CASE WHEN t.target_type='drive' THEN di.active ELSE 1 END AS resource_active,
 CASE WHEN t.target_type='drive' THEN '/archivo-proton/' || di.id ELSE '/' || t.document || '.html?hilo=' || t.id || '#' || t.section END AS target_url
 FROM threads t JOIN users u ON u.id=t.author JOIN documents d ON d.slug=t.document
-LEFT JOIN drive_items di ON di.id=t.drive_item_id'''
+LEFT JOIN drive_items di ON di.id=t.drive_item_id
+LEFT JOIN guest_attributions ga ON ga.target_type='thread' AND ga.target_id=t.id'''
 
 def now(): return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
@@ -43,6 +45,14 @@ def init_db(path):
         user_columns={r['name'] for r in c.execute('PRAGMA table_info(users)')}
         if 'developer_access' not in user_columns:
             c.execute('ALTER TABLE users ADD COLUMN developer_access INTEGER NOT NULL DEFAULT 0 CHECK(developer_access IN (0,1))')
+        if 'editor_access' not in user_columns:
+            c.execute('ALTER TABLE users ADD COLUMN editor_access INTEGER NOT NULL DEFAULT 0 CHECK(editor_access IN (0,1))')
+            c.execute("UPDATE users SET editor_access=1 WHERE role IN ('owner','admin')")
+        if 'moderator_access' not in user_columns:
+            c.execute('ALTER TABLE users ADD COLUMN moderator_access INTEGER NOT NULL DEFAULT 0 CHECK(moderator_access IN (0,1))')
+        c.execute('''CREATE TRIGGER IF NOT EXISTS users_initial_editor_access AFTER INSERT ON users
+            WHEN NEW.role IN ('owner','admin') AND NEW.editor_access=0
+            BEGIN UPDATE users SET editor_access=1 WHERE id=NEW.id; END''')
         thread_columns={r['name'] for r in c.execute('PRAGMA table_info(threads)')}
         if 'target_type' not in thread_columns:
             c.execute("ALTER TABLE threads ADD COLUMN target_type TEXT NOT NULL DEFAULT 'document'")
@@ -119,7 +129,11 @@ def event(c,actor,kind,detail,thread=None):
 def thread_data(ident):
     t=db().execute(THREAD_SELECT+' WHERE t.id=?',(ident,)).fetchone()
     if not t:abort(404)
-    comments=db().execute('SELECT c.*,u.name FROM comments c JOIN users u ON u.id=c.author WHERE c.thread_id=? ORDER BY c.id',(ident,)).fetchall()
+    comments=db().execute('''SELECT c.*,COALESCE(ga.display_name,u.name) AS name,
+        CASE WHEN ga.id IS NULL THEN 0 ELSE 1 END AS guest_author
+        FROM comments c JOIN users u ON u.id=c.author
+        LEFT JOIN guest_attributions ga ON ga.target_type='comment' AND ga.target_id=c.id
+        WHERE c.thread_id=? ORDER BY c.id''',(ident,)).fetchall()
     review=db().execute('SELECT r.*,u.name FROM reviews r JOIN users u ON u.id=r.author WHERE thread_id=? ORDER BY r.id DESC LIMIT 1',(ident,)).fetchone()
     return t,comments,review
 

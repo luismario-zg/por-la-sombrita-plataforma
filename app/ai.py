@@ -15,9 +15,13 @@ class SummaryError(Exception):pass
 def summarize(payload):
     raw=json.dumps(payload,ensure_ascii=False)
     if len(raw)>100000:raise SummaryError('El hilo supera el alcance del resumen automático del prototipo. Preparar la ficha manualmente.')
+    return valid_review(run_luna_json(PROMPT+raw,SCHEMA))
+
+def run_luna_json(prompt,schema_definition):
+    """Ejecuta una consulta acotada, sin herramientas ni persistencia de sesión."""
     binary=os.environ.get('PLS_CODEX_BIN','codex')
     with tempfile.TemporaryDirectory(prefix='pls-resumen-') as folder:
-        path=Path(folder);schema=path/'schema.json';out=path/'resultado.json';schema.write_text(json.dumps(SCHEMA))
+        path=Path(folder);schema=path/'schema.json';out=path/'resultado.json';schema.write_text(json.dumps(schema_definition))
         cmd=[binary,'exec','--ignore-user-config','--skip-git-repo-check','--ephemeral','--sandbox','read-only','--model',MODEL,'-c','model_reasoning_effort="high"','-c','web_search="disabled"','-c','tools.view_image=false','-c','project_doc_max_bytes=0','-c','mcp_servers={}','--output-schema',str(schema),'--output-last-message',str(out),'--color','never']
         for feature in ['shell_tool','unified_exec','code_mode','code_mode_host','apps','plugins','browser_use','browser_use_external','computer_use','image_generation','multi_agent','hooks','skill_search','skill_mcp_dependency_install','memories','goals']:
             cmd.extend(['--disable',feature])
@@ -25,9 +29,9 @@ def summarize(payload):
         # Autenticación guardada del operador; no se inyecta ni se copia a la aplicación.
         env={k:v for k,v in os.environ.items() if k in ['PATH','HOME','USER','LANG','LC_ALL','SSL_CERT_FILE','SSL_CERT_DIR']}
         proc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,text=True,cwd=folder,env=env,start_new_session=True)
-        try:proc.communicate(PROMPT+raw,timeout=180)
+        try:proc.communicate(prompt,timeout=180)
         except subprocess.TimeoutExpired:
             os.killpg(proc.pid,signal.SIGKILL);proc.wait();raise SummaryError('Se agotó el tiempo de generación. La ficha manual sigue disponible.')
         if proc.returncode or not out.is_file():raise SummaryError('No se pudo generar con Luna high. Revisar acceso o límites de la suscripción; no se sustituyó el modelo.')
-        try:return valid_review(json.loads(out.read_text()))
+        try:return json.loads(out.read_text())
         except (ValueError,KeyError,OSError) as exc:raise SummaryError('La respuesta no cumple el formato de ficha. No se aplicó ningún cambio.') from exc

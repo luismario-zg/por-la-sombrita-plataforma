@@ -8,6 +8,9 @@ Código en su propio repositorio. Por defecto, SQLite y los archivos de entrega 
 
 El despliegue utiliza Gunicorn con dos procesos y dos hilos por proceso, enlazado a loopback, detrás del túnel Cloudflare ya existente para `plsmty.bespokem.mx`. El servicio `pls-web.service` ejecuta la plataforma; `pls-platform-ai.service` consume la cola de fichas. `pls-web-tunnel.service` conserva el túnel dedicado, sin cambios de DNS.
 
+El consumidor de IA procesa tres colas de una en una: fichas de discusiones, consultas
+del asistente y sincronización de mejoras con GitHub. No ejecutar dos consumidores.
+
 El espejo de Proton permanece a cargo de `pls-proton-pull.timer`. Un complemento de su servicio ejecuta `scripts/indexar_proton.py` después de cada sincronización correcta. La aplicación nunca recibe credenciales de Proton ni consulta Proton durante una visita pública: sirve únicamente elementos aprobados por el índice local.
 
 Estado:
@@ -15,13 +18,118 @@ Estado:
 ```bash
 systemctl --user is-active pls-web.service pls-web-tunnel.service pls-platform-ai.service
 systemctl --user is-active pls-proton-pull.timer
+systemctl --user is-active pls-assistant-sources.timer
+systemctl --user list-timers pls-proton-pull.timer pls-assistant-sources.timer
 ```
 
+`pls-assistant-sources.timer` es la unidad diaria prevista para refrescar la caché
+allowlisted del asistente. Si todavía no está instalada, el segundo comando lo hará
+visible como ausente; usar mientras tanto la actualización manual descrita abajo.
+
 Las cuentas se crean una vez mediante `scripts/inicializar.py`. El administrador general puede cambiar permisos, desactivar cuentas y restablecer contraseñas desde `/administracion`. Una cuenta inicial no se marca automáticamente como miembro oficial.
+
+Los permisos de Editor, Moderador y Desarrollador son independientes del rol general y
+de la membresía. Editor habilita edición documental; bases, misión, visión, valores,
+objetivos y directrices exigen además administración. Moderador abre la cola privada de
+aportaciones. Desarrollador habilita planeación y sincronización técnica.
+
+## Fuentes y consultas del asistente
+
+Actualizar manualmente las copias permitidas de LABNL y GitHub:
+
+```bash
+PLS_DATA_DIR=/home/claude/.local/share/pls-plataforma \
+  .venv/bin/python scripts/indexar_fuentes_asistente.py
+```
+
+El script no descubre URLs ni sigue redirecciones a otro host. Mantiene como caché el
+texto público y la fecha de consulta. Un fallo conserva la copia anterior y se reporta
+en la salida; revisar el conteo de fuentes actualizadas y pendientes. El timer diario
+debe ejecutar el mismo comando con el entorno privado del servicio.
+
+Las preguntas y respuestas del asistente se vinculan al hash de la sesión anónima o
+autenticada que las creó. Solo esa sesión puede consultar el resultado. El consumidor
+elimina registros con más de 24 horas al recorrer la cola; si el consumidor está
+detenido, la limpieza se reanuda al volver a ejecutarse. Esta eliminación local no
+controla la retención del proveedor de IA.
+
+El asistente recibe como contexto documentos públicos visibles y la caché allowlisted.
+No tiene herramientas, no consulta la planeación privada ni el Proton privado y valida
+que toda cita corresponda a una fuente entregada.
+
+## Participación invitada y moderación
+
+Una persona sin cuenta puede enviar una conversación o comentario a destinos
+permitidos. La aportación queda pendiente y no aparece en rutas públicas hasta que una
+cuenta con permiso de Moderador la atienda en `/moderacion/aportaciones`.
+
+- el nombre o seudónimo elegido puede publicarse como atribución;
+- nombre de contacto, organización, teléfono y correo son opcionales y permanecen en la
+  cola privada;
+- aprobar publica mediante la cuenta moderadora pero conserva la atribución invitada;
+- descartar exige un motivo; aprobar admite una nota interna opcional;
+- bases, misión, visión, valores, objetivos y directrices no aceptan aportaciones
+  invitadas;
+- no existe todavía eliminación automática ni apelación de la moderación.
+
+No copiar contactos a comentarios, tickets o documentos públicos. Una solicitud de
+revisión o eliminación requiere atención administrativa hasta que exista un flujo
+específico.
+
+## Operación comunitaria
+
+Las rutas públicas `/trabajo`, `/actividades`, `/convocatorias` y `/rolitas` comparten
+comentarios y aceptan aportaciones invitadas moderadas. Las tareas conservan propuesta
+de responsable, aceptación/rechazo, plazo, entregable, revisión, cierre, eventos y
+notificaciones. Las actividades solo las crean o editan cuentas administradoras. Las
+convocatorias las puede crear una cuenta participante; editarlas requiere permiso de
+Editor.
+
+Las imágenes de convocatorias se guardan fuera del repositorio, junto a la base, con
+nombre derivado del hash y permisos privados. Solo se aceptan PNG/JPEG validados, hasta
+2 MiB y dimensiones acotadas. Respaldar también la carpeta `community-media`; el backup
+SQLite no incluye esos archivos.
+
+## Mejoras y sincronización con GitHub
+
+`/mejoras` conserva el registro comunitario. Una persona con permiso de Desarrollador
+puede confirmar que título y descripción son públicos y encolar la creación del issue.
+El consumidor invoca `gh api` con argumentos controlados, sin shell, y usa marcadores
+estables para reconciliar una interrupción sin crear el mismo issue o comentario dos
+veces.
+
+Cada cinco minutos, el consumidor marca para lectura los registros que ya tienen issue;
+después trae estado y comentarios. El cierre remoto mueve una mejora no verificada a
+revisión, nunca a implementada. Marcarla implementada exige comprobación y referencia
+en la plataforma.
+
+Comprobaciones operativas:
+
+```bash
+gh auth status
+systemctl --user is-active pls-platform-ai.service
+journalctl --user -u pls-platform-ai.service -n 100 --no-pager
+```
+
+Si la sincronización queda en error, el contenido local se conserva. Corregir conexión
+o permisos y volver a solicitar publicar/traer desde la ficha; no editar directamente
+la base ni repetir manualmente la creación del issue.
 
 ## Cambiar código
 
 Comprobar pruebas, preparar respaldo coherente con SQLite y revisar cambios. No desplegar código no revisado procedente de un fork o PR. Reiniciar únicamente servicios de la plataforma después de actualizar; no hace falta reiniciar el túnel por cambios de aplicación. Esta primera versión crea tablas si no existen; futuros cambios de esquema deberán incluir migraciones explícitas y reversibles cuando sea posible.
+
+```bash
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/importar_evolucion.py
+git diff --check
+```
+
+La primera orden cubre el núcleo, participación invitada, operación comunitaria,
+asistente, mejoras y seguridad de rutas. La segunda solo valida los borradores de
+contenido; importar requiere base explícita, respaldo confirmado y `--apply`. Antes de
+desplegar, revisar además que `gh auth status` corresponda a la cuenta y repositorio
+esperados y que las pruebas no dependan de red ni credenciales reales.
 
 ## Respaldos y restauración
 

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}{% block content %}
+<div class="contenedor seccion moderation-page">
+  <span class="eyebrow">Cola privada · contactos no públicos</span>
+  <h1>APORTACIONES<br>POR REVISAR</h1>
+  <p class="texto-grande">Las personas invitadas pueden proponer conversaciones y comentarios. Publicar conserva su nombre elegido; la cuenta moderadora y los datos de contacto no se presentan como autoría.</p>
+  {% for item in submissions %}
+  <article class="moderation-card">
+    <div class="fila"><span class="badge">Pendiente #{{ item.id }}</span><strong>{{ item.display_name }}</strong><time datetime="{{ item.created }}">{{ item.created[:16]|replace('T',' ') }} UTC</time></div>
+    <h2>{{ item.title or 'Comentario invitado' }}</h2>
+    <p class="metadata">{{ item.target_label }} · {{ 'Nueva discusión' if item.submission_type=='thread' else 'Comentario' }}</p>
+    {% if item.quote %}<blockquote>{{ item.quote }}</blockquote>{% endif %}
+    <p class="guest-body">{{ item.body }}</p>
+    {% if item.contact_name or item.contact_organization or item.contact_phone or item.contact_email %}
+    <details class="private-contact"><summary>Datos privados de contacto</summary>
+      <dl>
+        {% if item.contact_name %}<div><dt>Nombre</dt><dd>{{ item.contact_name }}</dd></div>{% endif %}
+        {% if item.contact_organization %}<div><dt>Organización</dt><dd>{{ item.contact_organization }}</dd></div>{% endif %}
+        {% if item.contact_phone %}<div><dt>Teléfono</dt><dd>{{ item.contact_phone }}</dd></div>{% endif %}
+        {% if item.contact_email %}<div><dt>Correo</dt><dd>{{ item.contact_email }}</dd></div>{% endif %}
+      </dl>
+    </details>{% endif %}
+    <div class="moderation-actions">
+      <form data-api="/api/participation/submissions/{{ item.id }}/moderate" data-success="moderation">
+        <input type="hidden" name="action" value="approve">
+        <label>Nota interna opcional<textarea name="reason" rows="2" maxlength="2000"></textarea></label>
+        <p class="form-error" role="alert"></p><button class="boton" type="submit">Aprobar y publicar</button>
+      </form>
+      <form data-api="/api/participation/submissions/{{ item.id }}/moderate" data-success="moderation">
+        <input type="hidden" name="action" value="reject">
+        <label>Motivo obligatorio del descarte<textarea name="reason" rows="2" maxlength="2000" required></textarea></label>
+        <p class="form-error" role="alert"></p><button class="small-button" type="submit">Descartar</button>
+      </form>
+    </div>
+  </article>
+  {% else %}<p class="empty">No hay aportaciones pendientes de moderación.</p>{% endfor %}
+</div>
+{% endblock %}

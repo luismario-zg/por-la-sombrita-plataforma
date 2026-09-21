@@ -1,0 +1,11 @@
+[Unit]
+Description=Revisar diariamente las fuentes públicas de Por la Sombrita
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 UTC
+RandomizedDelaySec=600
+Persistent=true
+Unit=pls-assistant-sources.service
+
+[Install]
+WantedBy=timers.target

@@ -24,6 +24,8 @@ document.querySelectorAll('form[data-api]').forEach(form=>{
    const result=await response.json();if(!response.ok)throw new Error(result.error||'No se pudo completar la acción.');
    form.dataset.dirty='false';sessionPromise=null;
    if(form.dataset.success==='thread'){location.assign('/discusiones/'+result.id);return;}
+   if(form.dataset.success==='guest-submission'){form.reset();if(form.closest('dialog'))form.closest('dialog').close();notify(result.message||'Recibimos tu aportación para moderación.');return;}
+   if(form.dataset.success==='moderation'){if(result.url)notify('Aportación publicada.');location.reload();return;}
    if(form.dataset.success==='secret'){const out=form.querySelector('[data-secret]');out.hidden=false;out.textContent='Contraseña provisional (entrega privada): '+result.password;notify('Contraseña restablecida. Entrega este acceso de forma individual.');return;}
    if(form.dataset.success==='revision'){const out=form.querySelector('[data-result]');out.textContent='Guardada la versión '+result.version+'. ID de revisión: '+result.revision_id+'. Si deriva de un hilo, revisa su ficha actualizada antes de cerrar.';form.querySelector('[name=version]').value=result.version;notify('Nueva versión guardada.');return;}
    location.reload();

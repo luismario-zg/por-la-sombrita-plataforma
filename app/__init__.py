@@ -6,6 +6,10 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 from .core import *
 from .development import PLAN_STATUSES, MemoryUploadRequest, TranscriptionError, sync_plan_items, transcribe_audio
+from .assistant import assistant as assistant_bp, SCHEMA_SQL as ASSISTANT_SCHEMA
+from .improvements import improvements as improvements_bp, SCHEMA_SQL as IMPROVEMENTS_SCHEMA,validate_guest_improvement,publish_guest_improvement
+from .participation import register_participation,register_guest_target,editor_allowed,moderator_allowed,PROTECTED_DOCUMENTS
+from .community import bp as community,init_community_schema,validate_guest_target,publish_guest_comment
 
 def create_app(config=None):
     app=Flask(__name__)
@@ -29,7 +33,17 @@ def create_app(config=None):
     )
     if config:app.config.update(config)
     init_db(app.config['DATABASE'])
-    with connect(app.config['DATABASE']) as connection:sync_plan_items(connection,app.config['DEVELOPMENT_INDEX'],now())
+    with connect(app.config['DATABASE']) as connection:
+        connection.executescript(ASSISTANT_SCHEMA+IMPROVEMENTS_SCHEMA)
+        init_community_schema(connection)
+        sync_plan_items(connection,app.config['DEVELOPMENT_INDEX'],now())
+    app.register_blueprint(assistant_bp)
+    app.register_blueprint(improvements_bp)
+    app.register_blueprint(community)
+    register_participation(app)
+    register_guest_target(app,'improvement',validate_guest_improvement,publish_guest_improvement)
+    for target_type in ['task','activity','call','rolita']:
+        register_guest_target(app,target_type,lambda connection,target_id,kind=target_type:validate_guest_target(connection,kind,target_id),publish_guest_comment)
     app.config['DUMMY_HASH']=generate_password_hash(secrets.token_urlsafe(16))
 
     @app.teardown_appcontext
@@ -40,12 +54,12 @@ def create_app(config=None):
     @app.before_request
     def protect():
         g.nonce=secrets.token_urlsafe(18)
-        if request.endpoint=='development_transcribe':request.max_content_length=app.config['TRANSCRIBE_MAX_BYTES']+65536
+        if request.endpoint in ['development_transcribe','voice_transcribe']:request.max_content_length=app.config['TRANSCRIBE_MAX_BYTES']+65536
         if app.config['BASE_URL'].startswith('https://') and request.headers.get('X-Forwarded-Proto')=='http':
             return redirect(app.config['BASE_URL']+request.full_path.rstrip('?'),code=301)
         if request.method in {'POST','PUT','PATCH','DELETE'}:
             if request.headers.get('Origin')!=app.config['BASE_URL']:abort(403,description='Origen de solicitud no permitido.')
-            if request.endpoint!='development_transcribe' and not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
+            if request.endpoint not in ['development_transcribe','voice_transcribe'] and not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
             user()
             if not g.session or not hmac.compare_digest(request.headers.get('X-CSRF-Token',''),g.session['csrf']):abort(403,description='La sesión de formulario expiró. Recarga la página.')
 
@@ -65,8 +79,9 @@ def create_app(config=None):
             response.headers['X-Robots-Tag']='noindex, nofollow'
         else:
             response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
-        if request.endpoint=='development_plan':response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
+        if request.endpoint in ['development_plan','assistant.page']:response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
         if request.endpoint in ['development_plan','development_report']:response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
+        if request.path.startswith('/moderacion/'):response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         if request.path.startswith('/api/') or request.path in ['/cuenta','/administracion']:response.headers['X-Robots-Tag']='noindex, nofollow'
         return response
 
@@ -76,7 +91,8 @@ def create_app(config=None):
         return render_template('error.html',title='No se pudo abrir la página',code=e.code,message=e.description),e.code
 
     @app.context_processor
-    def context():return dict(me=user(),roles=ROLES,states=STATES,base_url=app.config['BASE_URL'],nonce=g.nonce)
+    def context():return dict(me=user(),roles=ROLES,states=STATES,base_url=app.config['BASE_URL'],nonce=g.nonce,
+        editor_allowed=editor_allowed,moderator_allowed=moderator_allowed,protected_documents=PROTECTED_DOCUMENTS)
 
     @app.template_filter('filesize')
     def filesize(value):
@@ -115,7 +131,9 @@ def create_app(config=None):
     @app.get('/planeacion-desarrollo-plataforma')
     def development_plan():
         require_developer()
-        rows=[dict(row) for row in db().execute('SELECT * FROM development_items ORDER BY sort_order,key')]
+        history=request.args.get('vista')=='historial'
+        all_rows=[dict(row) for row in db().execute('SELECT * FROM development_items ORDER BY sort_order,key')]
+        rows=[row for row in all_rows if (row['status'] in ['implemented','closed'])==history]
         responses={row['key']:[] for row in rows};events={row['key']:[] for row in rows}
         for response in db().execute('''SELECT r.*,u.name AS author_name FROM development_responses r
             JOIN users u ON u.id=r.author ORDER BY r.id'''):
@@ -129,14 +147,15 @@ def create_app(config=None):
             if not group:group={'name':row['classification'],'items':[]};categories.append(group)
             row['responses']=responses[row['key']];row['events']=events[row['key']];group['items'].append(row)
         priority='Ideas de desarrollo y configuración de la plataforma'
-        categories.sort(key=lambda group:(group['name']!=priority,min(item['sort_order'] for item in group['items'])))
+        if not history and not any(group['name']==priority for group in categories):categories.append({'name':priority,'items':[]})
+        categories.sort(key=lambda group:(group['name']!=priority,min((item['sort_order'] for item in group['items']),default=0)))
         for position,group in enumerate(categories):
             group['priority']=group['name']==priority
             group['label']='Pendientes para desarrollar la plataforma' if group['priority'] else group['name']
             group['slug']='desarrollo-plataforma' if group['priority'] else 'categoria-'+str(position+1)
-        counts={status:sum(1 for row in rows if row['status']==status) for status in PLAN_STATUSES}
+        counts={status:sum(1 for row in all_rows if row['status']==status) for status in PLAN_STATUSES}
         return render_template('development_plan.html',title='Planeación de desarrollo de plataforma',categories=categories,
-            statuses=PLAN_STATUSES,counts=counts,total=len(rows),transcription_enabled=bool(app.config['TRANSCRIBE_API_KEY']))
+            statuses=PLAN_STATUSES,counts=counts,total=len(all_rows),history=history,transcription_enabled=bool(app.config['TRANSCRIBE_API_KEY']))
 
     @app.get('/planeacion-desarrollo-plataforma/informe')
     def development_report():
@@ -295,7 +314,7 @@ def create_app(config=None):
     @app.get('/administracion')
     def admin():
         require('owner')
-        rows=db().execute('SELECT id,username,name,role,active,membership,membership_reference,developer_access FROM users ORDER BY id').fetchall()
+        rows=db().execute('SELECT id,username,name,role,active,membership,membership_reference,developer_access,editor_access,moderator_access FROM users ORDER BY id').fetchall()
         return render_template('admin.html',title='Administrar cuentas y permisos',users=rows)
 
     @app.get('/participa')
@@ -349,7 +368,16 @@ def create_app(config=None):
 
     @app.post('/api/development/transcribe')
     def development_transcribe():
-        u=require_developer();limited('development-transcribe:'+str(u['id']),30,3600)
+        u=require_developer()
+        return voice_response(u)
+
+    @app.post('/api/voice/transcribe')
+    def voice_transcribe():
+        return voice_response(require())
+
+    def voice_response(u):
+        if u['membership']!='official':abort(403,description='El dictado requiere una cuenta con membresía validada.')
+        limited('development-transcribe:'+str(u['id']),30,3600)
         audio=request.files.get('audio')
         if not audio:abort(400,description="Falta el archivo de audio (campo 'audio').")
         mimetype=(audio.mimetype or '').split(';',1)[0].lower();payload=audio.read(app.config['TRANSCRIBE_MAX_BYTES']+1)
@@ -433,19 +461,23 @@ def create_app(config=None):
 
     @app.get('/editar/<slug>')
     def editor(slug):
-        require('owner','admin');doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
+        u=require()
+        if not editor_allowed(u,slug):abort(403,description='La edición requiere permiso de Editor; el núcleo también requiere administración.')
+        doc=db().execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
         if not doc or doc['hidden']:abort(404)
         return render_template('editor.html',title='Editar '+doc['title'],doc=doc,source_thread=request.args.get('hilo',''))
 
     @app.post('/api/documents/<slug>')
     def edit_document(slug):
-        u=require('owner','admin');data=body();version=number(data,'version');reason=field(data,'reason',2000);status=field(data,'status',20);ref=field(data,'reference',1000,False);content=field(data,'html',180000)
+        u=require()
+        if not editor_allowed(u,slug):abort(403,description='La edición requiere permiso de Editor; el núcleo también requiere administración.')
+        data=body();version=number(data,'version');reason=field(data,'reason',2000);status=field(data,'status',20);ref=field(data,'reference',1000,False);content=field(data,'html',180000)
         if status not in ['proposal','official']:abort(400,description='Estado documental inválido.')
         if status=='official' and not ref:abort(400,description='Indica el acta o referencia que respalda la aprobación oficial.')
         cleaned=clean_html(content)
         if not sections(cleaned):abort(400,description='El documento necesita al menos una sección.')
         c=db();c.execute('BEGIN IMMEDIATE');doc=c.execute('SELECT * FROM documents WHERE slug=?',(slug,)).fetchone()
-        if not doc:abort(404)
+        if not doc or doc['hidden']:abort(404)
         if doc['version']!=version:abort(409,description='Otra persona editó este documento. Recarga antes de guardar.')
         thread_id=data.get('source_thread') or None
         if thread_id:
@@ -461,8 +493,10 @@ def create_app(config=None):
         if membership=='official' and not ref:abort(400,description='Registra la referencia de aprobación de membresía.')
         c=db();c.execute('BEGIN IMMEDIATE');target=c.execute('SELECT * FROM users WHERE id=?',(ident,)).fetchone()
         if not target:abort(404)
+        editor=data.get('editor_access',bool(target['editor_access']));moderator=data.get('moderator_access',bool(target['moderator_access']))
+        if not isinstance(editor,bool) or not isinstance(moderator,bool):abort(400,description='Los permisos de editor y moderador deben ser booleanos.')
         if target['role']=='owner' and target['active'] and (role!='owner' or not active) and c.execute("SELECT COUNT(*) FROM users WHERE role='owner' AND active=1").fetchone()[0]<=1:abort(409,description='Debe quedar al menos un administrador general activo.')
-        c.execute('UPDATE users SET role=?,membership=?,membership_reference=?,active=?,developer_access=? WHERE id=?',(role,membership,ref,int(active),int(developer),ident));c.execute('DELETE FROM sessions WHERE user_id=?',(ident,));event(c,u['id'],'permissions',f"Permisos actualizados para la cuenta {ident}; desarrollador={int(developer)}.");c.commit();return jsonify(ok=True)
+        c.execute('UPDATE users SET role=?,membership=?,membership_reference=?,active=?,developer_access=?,editor_access=?,moderator_access=? WHERE id=?',(role,membership,ref,int(active),int(developer),int(editor),int(moderator),ident));c.execute('DELETE FROM sessions WHERE user_id=?',(ident,));event(c,u['id'],'permissions',f"Permisos actualizados para la cuenta {ident}; desarrollador={int(developer)}, editor={int(editor)}, moderador={int(moderator)}.");c.commit();return jsonify(ok=True)
 
     @app.post('/api/users/<int:ident>/reset-password')
     def reset_password(ident):
@@ -473,12 +507,12 @@ def create_app(config=None):
         return jsonify(password=provisional)
 
     @app.get('/robots.txt')
-    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /archivo-proton/contenido/\nDisallow: /planeacion-desarrollo-plataforma\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
+    def robots():return app.response_class('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /administracion\nDisallow: /cuenta\nDisallow: /editar/\nDisallow: /moderacion/\nDisallow: /archivo-proton/contenido/\nDisallow: /planeacion-desarrollo-plataforma\nDisallow: /reporte-temporal\nDisallow: /reporte_temporal\nSitemap: '+app.config['BASE_URL']+'/sitemap.xml\n',mimetype='text/plain')
 
     @app.get('/sitemap.xml')
     def sitemap():
         from xml.sax.saxutils import escape
-        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]
+        paths=['/','/archivo-proton','/discusiones','/revision','/miembros','/participa','/trabajo','/actividades','/convocatorias','/rolitas','/mejoras','/asistente']+[f"/{d['slug']}.html" for d in db().execute('SELECT slug FROM documents WHERE hidden=0')]+[f"/archivo-proton/{i['id']}" for i in db().execute("SELECT id FROM drive_items WHERE active=1 AND path<>''")]+[f"/discusiones/{t['id']}" for t in db().execute('SELECT id FROM threads')]+[f"/mejoras/{t['id']}" for t in db().execute('SELECT id FROM improvements')]
         return app.response_class('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+escape(app.config['BASE_URL']+p)+'</loc></url>' for p in paths)+'</urlset>',mimetype='application/xml')
 
     @app.get('/llms.txt')

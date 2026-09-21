@@ -1,0 +1,6 @@
+<nav class="community-nav" aria-label="Operación comunitaria">
+  <a href="/trabajo"{% if request.path == '/trabajo' %} aria-current="page"{% endif %}>Trabajo</a>
+  <a href="/actividades"{% if request.path == '/actividades' %} aria-current="page"{% endif %}>Actividades</a>
+  <a href="/convocatorias"{% if request.path == '/convocatorias' %} aria-current="page"{% endif %}>Convocatorias</a>
+  <a href="/rolitas"{% if request.path == '/rolitas' %} aria-current="page"{% endif %}>Rolitas</a>
+</nav>

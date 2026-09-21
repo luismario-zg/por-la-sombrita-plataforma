@@ -1,0 +1,17 @@
+<section class="community-comments" aria-label="Comentarios">
+  <h4>Comentarios</h4>
+  {% if comments %}
+    <ol>
+      {% for comment in comments %}
+        <li><strong>{{ (comment.guest_name ~ ' · Persona invitada') if comment.is_guest else comment.author_name }}</strong>
+          <time datetime="{{ comment.created }}">{{ comment.created[:10] }}</time><p>{{ comment.body }}</p></li>
+      {% endfor %}
+    </ol>
+  {% else %}<p class="community-empty">Todavía no hay comentarios.</p>{% endif %}
+  {% if me and me.role in ['owner','admin','reviewer','member'] %}
+    <form data-api="/api/community/{{ target_type }}/{{ target_id }}/comments">
+      <label>Sumar un comentario<textarea name="body" maxlength="5000" required></textarea></label>
+      <p class="form-error" role="alert"></p><button class="small-button" type="submit">Publicar comentario</button>
+    </form>
+  {% else %}<p class="form-note"><a href="/cuenta">Inicia sesión</a> para comentar.</p>{% endif %}
+</section>

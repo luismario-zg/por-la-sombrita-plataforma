@@ -3,7 +3,7 @@
   <div class="migas"><a href="/discusiones">Discusiones</a> / #{{ thread.id }}</div>
   <span class="badge {{ thread.state }}">{{ states[thread.state] }}</span>
   <h1>{{ thread.title }}</h1>
-  <p class="metadata">Inició <strong>{{ thread.author_name }}</strong> · <time datetime="{{ thread.created }}">{{ thread.created[:16]|replace('T',' ') }} UTC</time> · {{ thread.document_title }}</p>
+  <p class="metadata">Inició <strong>{{ thread.author_name }}</strong>{% if thread.guest_author %} <span class="guest-label">Persona invitada</span>{% endif %} · <time datetime="{{ thread.created }}">{{ thread.created[:16]|replace('T',' ') }} UTC</time> · {{ thread.document_title }}</p>
 
   <section class="resumen"><span class="eyebrow">Resumen de la discusión</span>
     {% if thread.state=='archived' %}<p>{{ thread.summary }}</p><strong>{{ 'Terminó con edición vinculada' if thread.outcome=='edited' else 'Terminó sin una edición vinculada' }}</strong>{% if thread.revision_id %}<p>Edición vinculada: #{{ thread.revision_id }} · <a href="/documentos/{{ thread.document }}/versiones">ver historial documental</a></p>{% endif %}
@@ -44,10 +44,11 @@
   </section>
 
   <section class="conversacion"><h2>LA CONVERSACIÓN</h2>
-    {% for c in comments %}<article class="comentario" id="mensaje-{{ c.id }}"><div class="fila"><strong>{{ c.name }}</strong><a href="#mensaje-{{ c.id }}">#{{ c.id }}</a><time datetime="{{ c.created }}">{{ c.created[:16]|replace('T',' ') }} UTC</time></div><p>{{ c.body }}</p></article>{% endfor %}
+    {% for c in comments %}<article class="comentario" id="mensaje-{{ c.id }}"><div class="fila"><strong>{{ c.name }}</strong>{% if c.guest_author %}<span class="guest-label">Persona invitada</span>{% endif %}<a href="#mensaje-{{ c.id }}">#{{ c.id }}</a><time datetime="{{ c.created }}">{{ c.created[:16]|replace('T',' ') }} UTC</time></div><p>{{ c.body }}</p></article>{% endfor %}
     {% if thread.state=='archived' %}<p class="aviso">La conversación se conserva en el historial. Un administrador puede reabrirla registrando el motivo.</p>
     {% elif me and not me.must_change and me.role!='reader' %}<form data-api="/api/threads/{{ thread.id }}/comments" data-success="reload"><label>Tu aportación<textarea name="body" rows="4" required maxlength="10000"></textarea></label><p class="form-note">Tu nombre y comentario serán públicos. Puedes referir un mensaje con su número.</p><p class="form-error" role="alert"></p><button class="boton" type="submit">Publicar comentario</button></form>
-    {% else %}<p><a href="/cuenta">Entra con tu cuenta</a> para comentar. La lectura es pública.</p>{% endif %}
+    {% elif not me and thread.document not in ['bases','directrices','mision','vision','valores','objetivos'] %}<details class="guest-comment"><summary>Aportar sin cuenta</summary><form data-api="/api/participation/submissions" data-success="guest-submission"><input type="hidden" name="submission_type" value="comment"><input type="hidden" name="target_type" value="thread"><input type="hidden" name="target_id" value="{{ thread.id }}" data-number>{% include 'participation/_guest_fields.html' %}<label>Tu aportación<textarea name="body" rows="4" required maxlength="10000"></textarea></label><p class="form-note">Una persona moderadora revisará el mensaje antes de publicarlo. Puedes referir otro mensaje con su número.</p><p class="form-error" role="alert"></p><button class="boton" type="submit">Enviar a moderación</button></form></details><p><a href="/cuenta">Entra con tu cuenta</a> si ya tienes acceso.</p>
+    {% else %}<p>Esta conversación requiere una cuenta habilitada para comentar.</p>{% endif %}
   </section>
 
   {% if me and me.role in ['owner','admin'] %}<section class="gestion"><h2>SEGUIMIENTO DEL CONSENSO</h2>

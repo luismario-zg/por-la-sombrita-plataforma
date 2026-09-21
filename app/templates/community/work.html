@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">
+<div class="contenedor community-page">
+  {% include 'community/_nav.html' %}
+  <header class="community-hero"><p class="eyebrow">Organización horizontal</p><h1>Trabajo comunitario</h1>
+    <p class="texto-grande">Las tareas pueden avanzar en paralelo. Una responsabilidad solo se vuelve compromiso cuando la persona propuesta la acepta y fija una fecha.</p></header>
+
+  {% if me and me.role in ['owner','admin','reviewer','member'] %}
+  <section class="community-panel" id="nueva-tarea"><h2>Crear una tarea</h2>
+    <form data-api="/api/community/tasks" class="community-form-grid">
+      <label>Título<input name="title" maxlength="160" required></label>
+      <label>Prioridad<select name="priority">{% for key,label in priorities.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+      <label class="wide">Descripción<textarea name="description" maxlength="6000" required></textarea></label>
+      <label>Referencia opcional<input name="reference" maxlength="500" placeholder="Acta, documento o rolitas"></label>
+      <label>Proponer responsable<select name="assignee_id" data-number><option value="">Dejar abierta</option>{% for person in people %}<option value="{{ person.id }}">{{ person.name }}{% if person.id == me.id %} (yo){% endif %}</option>{% endfor %}</select></label>
+      <label>Plazo si te la asignas<input type="date" name="due_date"></label>
+      <p class="form-note wide">Si eliges a otra persona, recibirá una propuesta y decidirá si acepta. La fecha la fija ella al aceptar.</p>
+      <p class="form-error wide" role="alert"></p><button class="small-button" type="submit">Crear tarea</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if me %}<section class="community-notifications" aria-labelledby="avisos"><h2 id="avisos">Tus avisos</h2>
+    {% if notifications %}<ul>{% for notice in notifications %}<li class="{{ 'unread' if not notice.read_at }}"><a href="{{ notice.href }}"><strong>{{ notice.title }}</strong><span>{{ notice.body }}</span></a>{% if not notice.read_at %}<form data-api="/api/community/notifications/{{ notice.id }}/read"><p class="form-error" role="alert"></p><button class="small-button">Marcar leído</button></form>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="community-empty">No tienes avisos pendientes.</p>{% endif %}
+  </section>{% endif %}
+
+  <section class="community-list"><div class="community-section-title"><h2>Tareas</h2><p>{{ tasks|length }} registradas con historial público.</p></div>
+  {% for task in tasks %}
+    <article class="task-card priority-{{ task.priority }}" id="tarea-{{ task.id }}">
+      <header><div><span class="community-badge">{{ priorities[task.priority] }}</span><span class="community-badge state-{{ task.state }}">{{ task_states[task.state] }}</span></div><h3>{{ task.title }}</h3></header>
+      <p class="preserve">{{ task.description }}</p>
+      {% if task.reference %}<p class="community-reference"><strong>Referencia:</strong> {{ task.reference }}</p>{% endif %}
+      <dl class="task-meta"><div><dt>Creó</dt><dd>{{ task.creator_name }}</dd></div><div><dt>Responsable</dt><dd>{{ task.assignee_name or 'Por tomar' }}</dd></div><div><dt>Plazo</dt><dd>{{ task.due_date or 'Sin compromiso todavía' }}</dd></div></dl>
+
+      {% if task.deliverable %}<section class="deliverable"><h4>Entregable · versión {{ task.deliverable_version }}</h4><p class="preserve">{{ task.deliverable }}</p>
+        {% if task.reviews %}<ul>{% for review in task.reviews %}<li><strong>{{ review.reviewer_name }}</strong> · {{ 'Aprobó' if review.decision == 'approve' else 'Pidió cambios' }} la versión {{ review.deliverable_version }}<p>{{ review.comment }}</p></li>{% endfor %}</ul>{% endif %}</section>{% endif %}
+
+      {% if me and me.role in ['owner','admin','reviewer','member'] and task.state != 'closed' %}
+      <div class="task-actions">
+        <details><summary>Cambiar prioridad</summary><form data-api="/api/community/tasks/{{ task.id }}/priority"><label>Prioridad<select name="priority">{% for key,label in priorities.items() %}<option value="{{ key }}"{% if key == task.priority %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><p class="form-error" role="alert"></p><button class="small-button">Guardar prioridad</button></form></details>
+        {% if task.state == 'open' %}
+          <details><summary>Tomar esta tarea</summary><form data-api="/api/community/tasks/{{ task.id }}/take"><label>Fecha prometida<input type="date" name="due_date" required></label><p class="form-error" role="alert"></p><button class="small-button">Asumir responsabilidad</button></form></details>
+          <details><summary>Proponer a otra persona</summary><form data-api="/api/community/tasks/{{ task.id }}/propose"><label>Persona<select name="assignee_id" data-number required>{% for person in people %}<option value="{{ person.id }}">{{ person.name }}</option>{% endfor %}</select></label><p class="form-error" role="alert"></p><button class="small-button">Enviar propuesta</button></form></details>
+        {% elif task.state == 'pending_acceptance' and task.assignee == me.id %}
+          <details open><summary>Responder propuesta</summary><form data-api="/api/community/tasks/{{ task.id }}/assignment"><label>Fecha prometida al aceptar<input type="date" name="due_date"></label><label>Motivo opcional al rechazar<textarea name="reason" maxlength="1000"></textarea></label><p class="form-error" role="alert"></p><div class="fila"><button class="small-button" name="decision" value="accept">Aceptar</button><button class="small-button" name="decision" value="reject">Rechazar</button></div></form></details>
+        {% elif task.state in ['in_progress','review'] and task.assignee == me.id %}
+          <details><summary>{{ 'Presentar una nueva versión' if task.deliverable else 'Presentar entregable' }}</summary><form data-api="/api/community/tasks/{{ task.id }}/deliverable"><label>Resultado o vínculo verificable<textarea name="body" maxlength="12000" required>{{ task.deliverable }}</textarea></label><p class="form-error" role="alert"></p><button class="small-button">Enviar a revisión comunitaria</button></form></details>
+        {% endif %}
+        {% if task.state == 'review' and task.assignee != me.id %}<details><summary>Revisar entregable</summary><form data-api="/api/community/tasks/{{ task.id }}/reviews"><label>Comentario<textarea name="comment" maxlength="3000" required></textarea></label><p class="form-error" role="alert"></p><div class="fila"><button class="small-button" name="decision" value="approve">Aprobar</button><button class="small-button" name="decision" value="changes">Pedir cambios</button></div></form></details>{% endif %}
+        <details><summary>Cerrar tarea</summary><form data-api="/api/community/tasks/{{ task.id }}/close"><label>Resultado y razón del cierre<textarea name="note" maxlength="3000" required></textarea></label><p class="form-error" role="alert"></p><button class="small-button">Registrar cierre</button></form></details>
+      </div>{% endif %}
+      <details class="task-history"><summary>Historial completo</summary><ol>{% for event in task.events %}<li><time>{{ event.created }}</time> · {{ event.actor_name or 'Sistema' }}<p>{{ event.detail }}</p></li>{% endfor %}</ol></details>
+      {% with comments=task.comments,target_type='task',target_id=task.id %}{% include 'community/_comments.html' %}{% endwith %}
+    </article>
+  {% else %}<p class="community-empty">Todavía no hay tareas. Una persona con cuenta puede abrir la primera.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script defer src="{{ url_for('static',filename='community.js') }}"></script>{% endblock %}

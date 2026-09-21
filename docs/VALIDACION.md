@@ -1,5 +1,25 @@
 # Validación del primer prototipo
 
+## Evolución del 21 de septiembre de 2026
+
+La suite completa pasó 57 pruebas. Después del ajuste de visibilidad de convocatorias
+programadas, también pasaron las 22 pruebas de operación y asistente/mejoras. Se
+probaron asignaciones concurrentes, aceptación y cierre únicos, permisos, privacidad
+de invitados, contactos, reintentos y paginación de GitHub, y conservación del
+historial de preguntas resueltas.
+
+Chromium a 390 × 844 comprobó las nuevas rutas públicas y las vistas privadas sin
+errores de JavaScript ni desbordamiento horizontal. La tarjeta de planeación más
+alta midió 700 px. Una consulta ficticia con Luna high devolvió una respuesta con
+referencias reales de LABNL y GitHub. La importación documental se ensayó en una
+base temporal, incluidas versiones, anclas e idempotencia.
+
+La verificación de publicación no encontró bases, audios, respuestas privadas ni
+patrones conocidos de credenciales entre los cambios. Estos resultados no equivalen
+a ratificar documentos ni a completar investigación, licencias o decisiones futuras.
+
+## Primera versión
+
 13 de septiembre de 2026. Se probaron escenarios con cuentas y mensajes ficticios en bases temporales, separadas de producción.
 
 - 15 pruebas automatizadas: lectura pública, autenticación y rotación de sesiones, cambio de contraseña, CSRF y Origin, límites de acceso, roles y último administrador general, anclas/versiones, obsolescencia de fichas, archivo/reapertura, edición vinculada, sanitización y escape, cola de IA, fallos del proveedor y conservación de revisiones humanas.

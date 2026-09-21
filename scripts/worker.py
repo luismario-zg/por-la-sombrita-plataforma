@@ -5,6 +5,9 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from app.core import connect, now, sections, event, drive_snapshot
 from app.ai import summarize, SummaryError
+from app.assistant import process_assistant_job
+from app.improvements import process_github_job
+from app.community import sync_task_notifications
 
 path=Path(os.environ.get('PLS_DATA_DIR',str(Path.home()/'.local/share/pls-plataforma')))/'plataforma.sqlite3'
 
@@ -20,7 +23,10 @@ def process_one():
         t=c.execute('SELECT * FROM threads WHERE id=?',(job['thread_id'],)).fetchone()
         doc=c.execute('SELECT * FROM documents WHERE slug=?',(t['document'],)).fetchone()
         base_review=c.execute('SELECT COALESCE(MAX(id),0) FROM reviews WHERE thread_id=?',(t['id'],)).fetchone()[0]
-        comments=[dict(x) for x in c.execute('SELECT c.id,u.name AS author,c.body,c.created FROM comments c JOIN users u ON u.id=c.author WHERE thread_id=? ORDER BY c.id',(t['id'],))]
+        comments=[dict(x) for x in c.execute('''SELECT c.id,COALESCE(ga.display_name,u.name) AS author,c.body,c.created
+            FROM comments c JOIN users u ON u.id=c.author
+            LEFT JOIN guest_attributions ga ON ga.target_type='comment' AND ga.target_id=c.id
+            WHERE c.thread_id=? ORDER BY c.id''',(t['id'],))]
         section=next((s for s in sections(doc['html']) if s['id']==t['section']),None)
         current_version=doc['version']
         current_section=section['text'] if section else 'La sección original ya no existe; revisar versiones.'
@@ -55,6 +61,18 @@ def process_one():
 
 if __name__=='__main__':
     # Un servicio dedicado ejecuta un único consumidor. Recuperación explícita al reiniciar.
-    with connect(path) as c:c.execute("UPDATE ai_jobs SET state='failed',error='El servicio se reinició durante la generación. Puedes solicitarla nuevamente.',finished=? WHERE state='running'",(now(),))
+    with connect(path) as c:
+        c.execute("UPDATE ai_jobs SET state='failed',error='El servicio se reinició durante la generación. Puedes solicitarla nuevamente.',finished=? WHERE state='running'",(now(),))
+        c.execute("UPDATE assistant_jobs SET state='failed',error='El servicio se reinició; vuelve a consultar.',finished=? WHERE state='running'",(now(),))
+        c.execute("UPDATE improvements SET sync_state='error',sync_error='La sincronización se interrumpió; puedes reintentar.' WHERE sync_state='running'")
+    last_sync=0;base_url=os.environ.get('PLS_BASE_URL','https://plsmty.bespokem.mx')
     while True:
-        if not process_one():time.sleep(3)
+        if time.monotonic()-last_sync>300:
+            with connect(path) as c:
+                c.execute("UPDATE improvements SET sync_state='pull' WHERE issue_number IS NOT NULL AND sync_state='idle'")
+                sync_task_notifications(c)
+            last_sync=time.monotonic()
+        worked=process_one()
+        worked=process_assistant_job(path,base_url) or worked
+        worked=process_github_job(path,base_url) or worked
+        if not worked:time.sleep(3)

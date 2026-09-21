@@ -18,10 +18,15 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Administrar permisos y accesos; registrar membresía oficial de forma independiente.
 - Navegar en modo público y de solo lectura todas las carpetas y archivos del espacio compartido `Por La Sombrita MTY General` en Proton Drive.
 - Abrir una discusión sobre una carpeta o un archivo completo desde cualquier nivel del árbol. Los documentos nativos que no se pueden descargar muestran su ruta y el acceso convencional a Proton.
+- Enviar aportaciones sin cuenta con un nombre elegido. Entran a una cola privada; una persona con permiso de Moderador las aprueba o descarta con motivo antes de que aparezcan públicamente. Los contactos opcionales permanecen privados.
+- Separar el rol general y la membresía de tres capacidades adicionales: Editor, Moderador y Desarrollador. Las bases y directrices requieren Editor y además administración.
+- Organizar tareas con aceptación expresa, plazo, entregables, revisión, historial y notificaciones; documentar actividades; publicar convocatorias con vigencia; y conversar alrededor de la playlist colectiva «Rolitas para el solazo».
+- Proponer mejoras de la plataforma y, con permiso de Desarrollador, publicar y sincronizar su seguimiento con issues de GitHub. Cerrar un issue no equivale a verificar una implementación.
+- Consultar un asistente que responde únicamente con documentos públicos vigentes y copias cacheadas de fuentes públicas concretas. La respuesta conserva citas y fecha de consulta; si no hay evidencia suficiente, debe declararlo.
 - Con permiso de Desarrollador, consultar la planeación técnica, guardar respuestas con historial y mantener visibles preguntas pendientes, trabajo en proceso e implementaciones terminadas.
 - Dictar una respuesta desde el micrófono para obtener un borrador editable; el audio no se conserva y la transcripción nunca se guarda automáticamente.
 
-No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El administrador general inicial es Luis Mario; las otras ocho cuentas iniciales son participantes. Las credenciales se generan localmente y nunca están incluidas en este repositorio.
+No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El asistente no tiene herramientas y no recibe fuentes privadas. Sus preguntas y respuestas solo se consultan desde la sesión que las creó y el consumidor elimina de la plataforma los registros con más de 24 horas. El administrador general inicial es Luis Mario; las otras ocho cuentas iniciales son participantes. Las credenciales se generan localmente y nunca están incluidas en este repositorio.
 
 ## Ejecutar localmente
 
@@ -61,6 +66,14 @@ Nunca desactivar cookies Secure en el sitio publicado. `inicializar.py` es idemp
 
 Con IA habilitada, ejecutar además `.venv/bin/python scripts/worker.py` como servicio dedicado. Solo debe existir un consumidor de la cola. No se exponen comandos, modelos arbitrarios ni credenciales a participantes.
 
+El mismo consumidor procesa fichas de discusión, consultas del asistente y la cola de sincronización con GitHub. Para alimentar el asistente con la allowlist de páginas públicas de LABNL y archivos públicos de GitHub:
+
+```bash
+PLS_DATA_DIR=/ruta/privada .venv/bin/python scripts/indexar_fuentes_asistente.py
+```
+
+En operación, un timer diario ejecuta ese comando. La caché no sigue enlaces arbitrarios ni sustituye la versión viva: cada respuesta muestra la fuente y la fecha de consulta.
+
 Para actualizar el catálogo público después de sincronizar el espejo:
 
 ```bash
@@ -72,6 +85,8 @@ El indexador solo acepta elementos bajo `Por La Sombrita MTY General`. Excluye r
 ## Datos y código público
 
 `contenido/inicial/` contiene ocho HTML previamente públicos usados para iniciar una base vacía. Son una fotografía histórica del sitio anterior, no la configuración de la aplicación ni su estado actual. El contenido vigente y sus revisiones se conservan en la base privada de ejecución. Las discusiones reales nunca se exportan al repositorio Git.
+
+`contenido/evolucion/` conserva borradores nuevos para Directrices, Conocimiento y una ampliación del Manual. `scripts/importar_evolucion.py` los valida y puede preparar nuevas revisiones, pero no se ejecuta implícitamente ni ratifica su contenido.
 
 - [Operación y respaldos](docs/OPERACION.md).
 - [Modelo de permisos y seguridad](SECURITY.md).

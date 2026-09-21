@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">
+<div class="contenedor community-page rolitas-page">{% include 'community/_nav.html' %}
+  <header class="community-hero"><p class="eyebrow">Playlist colectiva</p><h1>Rolitas para caminar con sombra</h1><p class="texto-grande">Esta sección está en desarrollo. La comunidad está preparando la lista colaborativa y sus instrucciones de uso.</p></header>
+  <section class="community-panel"><h2>Aún no hay un enlace publicado</h2><p>No mostramos una playlist vacía ni un vínculo inventado. Cuando la persona responsable acepte la tarea, entregue el enlace y la comunidad lo revise, aparecerá aquí con instrucciones claras.</p>{% if playlist_task %}<a class="small-button" href="/trabajo#tarea-{{ playlist_task.id }}">Consultar el avance de la tarea</a>{% else %}<a class="small-button" href="/trabajo">Ver trabajo comunitario</a>{% endif %}</section>
+  <div id="comentarios-1">{% with target_type='rolita',target_id=1 %}{% include 'community/_comments.html' %}{% endwith %}</div>
+</div>
+{% endblock %}
+{% block scripts %}<script defer src="{{ url_for('static',filename='community.js') }}"></script>{% endblock %}

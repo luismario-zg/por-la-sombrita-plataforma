@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}<section class="seccion"><div class="contenedor lectura">
+<span class="eyebrow">Consulta con fuentes</span><h1>Pregúntale a Por la Sombrita</h1>
+<p>Explora lo que dicen los documentos de la comunidad, el código público y las páginas de LABNL. El asistente puede equivocarse: revisa sus referencias y la fecha de consulta.</p>
+<p class="form-note">Tu pregunta se envía a OpenAI para responder con Luna. Solo tú puedes ver la respuesta en esta sesión; la consulta se elimina de la plataforma en 24 horas. No incluyas contraseñas ni datos personales. La grabación de voz se transcribe y se descarta.</p>
+{% if enabled %}<form id="assistant-form" class="formulario voice-enabled" data-transcribe-url="/api/voice/transcribe">
+<label for="assistant-question">¿Qué quieres saber?<textarea id="assistant-question" name="question" rows="4" maxlength="2500" required></textarea></label>
+{% if me and me.membership=='official' and not me.must_change %}<div class="voice-row"><button type="button" class="small-button voice-button">🎙️ Dictar</button><button type="button" class="small-button voice-cancel" hidden>Descartar</button><span class="voice-timer" hidden>0:00</span><span class="voice-status" role="status"></span></div>{% endif %}
+<button class="boton" type="submit">Consultar →</button><p class="form-error" role="alert"></p><p id="assistant-progress" role="status"></p>
+</form>{% else %}<p class="aviso">El asistente está en preparación. Puedes consultar directamente las fuentes.</p>{% endif %}
+<article id="assistant-answer" hidden><h2>Respuesta</h2><p class="preserve-lines" id="assistant-text"></p><p id="assistant-caution"></p><h3>Fuentes de esta respuesta</h3><ul id="assistant-citations"></ul></article>
+<details><summary>Fuentes consultables y actualización</summary><p>Los documentos de la plataforma se consultan en su versión vigente. Las fuentes externas son copias de lectura; una respuesta puede indicar que falta información.</p><ul>{% for source in sources %}<li><a href="{{ source.url }}" rel="noopener">{{ source.title }}</a> · consulta {{ source.fetched[:10] }}</li>{% else %}<li>La incorporación de fuentes externas está pendiente.</li>{% endfor %}</ul></details>
+</div></section>{% endblock %}
+{% block scripts %}<script defer src="/static/assistant.js"></script><script defer src="/static/development-plan.js"></script>{% endblock %}

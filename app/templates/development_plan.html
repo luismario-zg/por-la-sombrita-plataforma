@@ -13,20 +13,22 @@
   </div>
   <div class="aviso plan-cycle"><strong>Cómo funciona este ciclo:</strong> responde una o varias preguntas y pulsa Guardar. La voz solo llena un borrador editable. Cuando hayas terminado, avisa a Codex; se leerán las respuestas guardadas, se ejecutará lo suficientemente definido y esta misma sección se actualizará con resultados y dudas restantes.</div>
   <nav class="tabs" aria-label="Contenido de planeación">
-    <a href="#respuestas">Responder y revisar pendientes</a>
+    <a href="/planeacion-desarrollo-plataforma#respuestas">Decisiones y aclaraciones pendientes</a>
+    <a href="/planeacion-desarrollo-plataforma?vista=historial#respuestas">Historial de resueltas</a>
     <a href="#informe-completo">Consultar el informe completo</a>
   </nav>
 </div></section>
 
 <section class="seccion plan-answers" id="respuestas"><div class="contenedor">
-  <div class="seccion-titulo"><div><span class="eyebrow">Decisiones y aclaraciones</span><h2>Respuestas guardadas</h2></div><p>Solo las cuentas con permiso de Desarrollador pueden consultar y responder esta planeación. Cada guardado conserva autor, fecha e historial.</p></div>
-  {% if not categories %}<div class="empty">Todavía no se ha cargado el índice de preguntas del plan.</div>{% endif %}
+  <div class="seccion-titulo"><div><span class="eyebrow">Decisiones y aclaraciones</span><h2>{{ 'Historial de resueltas' if history else 'Pendientes para responder' }}</h2></div><p>Las preguntas resueltas salen de los pendientes y conservan su historial. Cada respuesta guarda autor y fecha.</p></div>
+  {% if not categories %}<div class="empty">{{ 'Aún no hay preguntas resueltas.' if history else 'No hay preguntas pendientes en este momento.' }}</div>{% endif %}
   {% if categories %}<nav class="plan-category-tabs" role="tablist" aria-label="Categorías de decisiones">
     {% for category in categories %}<button type="button" role="tab" id="tab-{{ category.slug }}" aria-controls="panel-{{ category.slug }}" aria-selected="{{ 'true' if loop.first else 'false' }}" class="{{ 'priority' if category.priority else '' }}">{{ category.label }} <span>{{ category['items']|length }}</span></button>{% endfor %}
   </nav>{% endif %}
   {% for category in categories %}
   <section class="plan-category" id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}" data-plan-panel {% if not loop.first %}hidden{% endif %}>
     <h3>{{ category.label }}</h3>
+    {% if not category['items'] %}<p class="empty">No hay aclaraciones técnicas pendientes en este momento. Las demás categorías conservan sus propios asuntos por resolver.</p>{% endif %}
     {% for item in category['items'] %}
     <article class="plan-item" id="{{ item.key }}">
       <div class="plan-item-head">
@@ -53,13 +55,13 @@
       </details>
       {% endif %}
 
-      {% if me and me.role in ['owner','admin','reviewer','member'] and not me.must_change %}
+      {% if not history and me and me.developer_access and not me.must_change %}
       <form class="plan-response-form" data-api="/api/development/items/{{ item.key }}/responses">
         <label for="respuesta-{{ item.key }}">{{ 'Agregar otra respuesta' if item.responses else 'Escribir una respuesta' }}
           <textarea id="respuesta-{{ item.key }}" name="body" rows="3" maxlength="12000" required></textarea>
         </label>
         <div class="voice-row">
-          <button type="button" class="small-button voice-button" aria-label="Grabar una respuesta para {{ item.key }}">🎙️ Dictar</button>
+          {% if me.membership=='official' %}<button type="button" class="small-button voice-button" aria-label="Grabar una respuesta para {{ item.key }}">🎙️ Dictar</button>{% endif %}
           <button type="button" class="small-button voice-cancel" hidden>Descartar</button>
           <span class="voice-timer" hidden>0:00</span>
           <span class="voice-status" role="status" aria-live="polite"></span>
@@ -70,7 +72,7 @@
       </form>
       {% elif not me %}<p class="plan-login"><a href="/cuenta">Entra con tu cuenta para responder esta pregunta.</a></p>
       {% elif me.must_change %}<p class="plan-login"><a href="/cuenta">Cambia tu contraseña provisional para responder.</a></p>
-      {% else %}<p class="form-note">Tu cuenta es de solo lectura.</p>{% endif %}
+      {% elif not history %}<p class="form-note">Tu cuenta es de solo lectura.</p>{% endif %}
     </article>
     {% endfor %}
   </section>
@@ -78,7 +80,7 @@
 </div></section>
 
 <section class="seccion plan-report" id="informe-completo"><div class="contenedor">
-  <div class="seccion-titulo"><div><span class="eyebrow">Contexto y trazabilidad</span><h2>Informe completo</h2></div><p>Incluye el plan de implementación, las fuentes, la clasificación de decisiones, los asuntos y las transcripciones originales.</p></div>
+  <div class="seccion-titulo"><div><span class="eyebrow">Contexto y trazabilidad</span><h2>Informe de origen</h2></div><p>Antecedente del 19 de septiembre: conserva fuentes y transcripciones. Las respuestas, estados y pendientes actuales están arriba; este informe histórico no cambia con cada ejecución.</p></div>
   <p class="plan-report-link"><a class="small-button" href="/planeacion-desarrollo-plataforma/informe" target="_blank" rel="noopener">Abrir el informe en una pestaña nueva ↗</a></p>
   <iframe class="plan-report-frame" src="/planeacion-desarrollo-plataforma/informe" title="Informe completo de planeación de desarrollo" loading="lazy"></iframe>
 </div></section>
