@@ -64,6 +64,18 @@ def test_public_read_and_no_anonymous_mutation(app):
     assert c.get('/archivo-proton.html').status_code==404
     assert c.get('/editar/archivo-proton').status_code in [401,404]
 
+def test_primary_navigation_has_unified_entries_and_mobile_control(app):
+    public=client(app).get('/')
+    assert public.status_code==200
+    assert b'aria-controls="navegacion-principal"' in public.data
+    assert b'data-nav-open="false"' in public.data
+    assert b'>Chatbot</a>' in public.data and b'>Asistente</a>' not in public.data
+    assert public.data.count(b'class="nav-entry"')==4
+    assert b'<summary class="nav-entry">Conocimiento</summary>' in public.data
+    owner=client(app,'owner').get('/')
+    assert owner.data.count(b'class="nav-entry"')==5
+    assert b'class="nav-entry" href="/planeacion-desarrollo-plataforma">Planeaci' in owner.data
+
 def test_development_plan_requires_developer_and_report_is_isolated(app):
     assert client(app).get('/planeacion-desarrollo-plataforma').status_code==401
     assert client(app,'member').get('/planeacion-desarrollo-plataforma').status_code==403
