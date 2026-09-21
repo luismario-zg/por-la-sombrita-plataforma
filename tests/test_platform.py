@@ -76,6 +76,15 @@ def test_primary_navigation_has_unified_entries_and_mobile_control(app):
     assert owner.data.count(b'class="nav-entry"')==5
     assert b'class="nav-entry" href="/planeacion-desarrollo-plataforma">Planeaci' in owner.data
 
+def test_social_preview_uses_versioned_large_image(app):
+    page=client(app).get('/')
+    assert b'property="og:image" content="http://localhost/static/compartir-pls-20260921.jpg"' in page.data
+    assert b'property="og:image:type" content="image/jpeg"' in page.data
+    assert b'property="og:image:width" content="1200"' in page.data
+    assert b'property="og:image:height" content="630"' in page.data
+    assert b'name="twitter:card" content="summary_large_image"' in page.data
+    assert b'/static/compartir.png' not in page.data
+
 def test_development_plan_requires_developer_and_report_is_isolated(app):
     assert client(app).get('/planeacion-desarrollo-plataforma').status_code==401
     assert client(app,'member').get('/planeacion-desarrollo-plataforma').status_code==403

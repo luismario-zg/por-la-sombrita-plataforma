@@ -11,9 +11,22 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='plataforma.css') }}">
   <script defer src="{{ url_for('static',filename='plataforma.js') }}"></script>
   <meta property="og:title" content="{{ title }} · Por la Sombrita">
-  <meta property="og:image" content="{{ base_url }}/static/compartir.png">
+  <meta property="og:description" content="{{ description|default('Documentación y deliberación de Por la Sombrita, comunidad ciudadana de sombra y confort peatonal en Monterrey. Prototipo abierto a lectura pública.') }}">
+  <meta property="og:image" content="{{ base_url }}/static/compartir-pls-20260921.jpg">
+  <meta property="og:image:secure_url" content="{{ base_url }}/static/compartir-pls-20260921.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Una ciudad más caminable: collage de una persona con sombrilla amarilla frente al Cerro de la Silla.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{{ base_url }}{{ request.path }}">
+  <meta property="og:site_name" content="Por la Sombrita">
+  <meta property="og:locale" content="es_MX">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title }} · Por la Sombrita">
+  <meta name="twitter:description" content="{{ description|default('Documentación y deliberación de Por la Sombrita, comunidad ciudadana de sombra y confort peatonal en Monterrey. Prototipo abierto a lectura pública.') }}">
+  <meta name="twitter:image" content="{{ base_url }}/static/compartir-pls-20260921.jpg">
+  <meta name="twitter:image:alt" content="Una ciudad más caminable: collage de una persona con sombrilla amarilla frente al Cerro de la Silla.">
   <meta name="theme-color" content="#f4ecda">
   <script type="application/ld+json" nonce="{{ nonce }}">{{ {'@context':'https://schema.org','@type':'WebPage','name':title,'url':base_url+request.path,'inLanguage':'es-MX','isPartOf':{'@type':'WebSite','name':'Por la Sombrita','url':base_url}}|tojson }}</script>
 </head>
