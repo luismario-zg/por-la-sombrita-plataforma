@@ -96,7 +96,7 @@ El indexador solo acepta elementos bajo `Por La Sombrita MTY General`. Excluye r
 
 ## Rama desplegada
 
-Al 26 de septiembre de 2026 el sitio publicado se ejecuta desde la rama `ops/reactivacion-2026-09-18`; `main` quedó en la versión del archivo público de Proton y no incluye la evolución comunitaria, el editor Markdown ni la navegación actual. Hasta integrar esa rama, consultar el código vigente en ella.
+El sitio publicado se ejecuta desde `main` en la carpeta del servicio `pls-web.service`. El 26 de septiembre de 2026 se integró por avance rápido la rama `ops/reactivacion-2026-09-18`, que se conserva como antecedente. Publicar: probar, hacer commit en `main`, `git push` y reiniciar únicamente `pls-web.service` (ver [operación](docs/OPERACION.md)).
 
 ## Comprobar
 

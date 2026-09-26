@@ -131,6 +131,23 @@ contenido; importar requiere base explícita, respaldo confirmado y `--apply`. A
 desplegar, revisar además que `gh auth status` corresponda a la cuenta y repositorio
 esperados y que las pruebas no dependan de red ni credenciales reales.
 
+## Publicar una actualización
+
+El servicio sirve directamente la carpeta del repositorio en `main`; no hay paso de
+compilación. Las plantillas y el código se cargan al arrancar Gunicorn.
+
+1. `.venv/bin/python -m pytest -q` y `git diff --check`.
+2. Opcional: vista previa con una copia de la base hecha con la API de backup de SQLite,
+   en un puerto local distinto y con `PLS_DATA_DIR` temporal; borrarla al terminar.
+3. Commit en `main` y `git push origin main` (cuenta `gh` del operador).
+4. Medir recursos (`free -h`, `sar -u 1 3`) según `VPS_OPERATIONS_NOTE.md`.
+5. `systemctl --user restart pls-web.service`; comprobar `curl -fsS http://127.0.0.1:8876/healthz`
+   y después las rutas públicas. El túnel no se reinicia. Reiniciar
+   `pls-platform-ai.service` solo si cambió `scripts/worker.py` o el código que consume.
+
+Los cambios de contenido documental no requieren despliegue: se guardan como nueva
+revisión desde `/editar/<documento>` o con un script revisado, previo respaldo.
+
 ## Edición de documentos
 
 Las cuentas con permiso de Editor usan Markdown desde `/editar/<documento>`. El
