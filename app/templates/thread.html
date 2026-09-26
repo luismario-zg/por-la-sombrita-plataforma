@@ -3,7 +3,7 @@
   <div class="migas"><a href="/discusiones">Discusiones</a> / #{{ thread.id }}</div>
   <span class="badge {{ thread.state }}">{{ states[thread.state] }}</span>
   <h1>{{ thread.title }}</h1>
-  <p class="metadata">Inició <strong>{{ thread.author_name }}</strong>{% if thread.guest_author %} <span class="guest-label">Persona invitada</span>{% endif %} · <time datetime="{{ thread.created }}">{{ thread.created[:16]|replace('T',' ') }} UTC</time> · {{ thread.document_title }}</p>
+  <p class="metadata">Inició <strong>{{ thread.author_name }}</strong>{% if thread.guest_author %} <span class="guest-label">Persona invitada</span>{% endif %} · <time datetime="{{ thread.created }}">{{ thread.created|hora }}</time> · {{ thread.document_title }}</p>
 
   <section class="resumen"><span class="eyebrow">Resumen de la discusión</span>
     {% if thread.state=='archived' %}<p>{{ thread.summary }}</p><strong>{{ 'Terminó con edición vinculada' if thread.outcome=='edited' else 'Terminó sin una edición vinculada' }}</strong>{% if thread.revision_id %}<p>Edición vinculada: #{{ thread.revision_id }} · <a href="/documentos/{{ thread.document }}/versiones">ver historial documental</a></p>{% endif %}
@@ -27,11 +27,11 @@
   <section id="ficha" class="ficha"><div class="seccion-titulo"><div><span class="eyebrow">Herramienta de revisión y aprobación</span><h2>¿QUÉ QUEREMOS<br>RESOLVER?</h2></div><div><a href="/revision">Mesa de revisión →</a><br><a href="/discusiones/{{ thread.id }}/fichas">Versiones de la ficha →</a></div></div>
     {% if payload %}<dl class="ficha-grid">
       {% for k,label in [('topic','Tema en una frase'),('question','Pregunta o asunto por resolver'),('context','Contexto del proyecto'),('current_text','Elemento o redacción actual afectada'),('proposed_text','Cambio, acción o redacción propuesta'),('agreements','Coincidencias expresadas'),('disagreements','Desacuerdos'),('pending','Pendientes por aclarar'),('evidence','Mensajes que sustentan la ficha')] %}<div><dt>{{ label }}</dt><dd>{{ payload[k] or 'Sin información suficiente.' }}</dd></div>{% endfor %}
-    </dl><p class="metadata">{{ 'Generada con Luna high' if review.source=='luna-high' else 'Revisada por '+review.name }} · {{ review.created[:16]|replace('T',' ') }} UTC · {{ review.comment_count }} mensajes contemplados · versión {{ review.document_version }} del elemento</p>
+    </dl><p class="metadata">{{ 'Borrador generado con IA' if review.source=='luna-high' else 'Revisada por '+review.name }} · {{ review.created|hora }} · {{ review.comment_count }} mensajes contemplados · versión {{ review.document_version }} del elemento</p>
     {% else %}<p class="empty">Todavía no hay ficha. Un revisor puede elaborarla o solicitar un borrador asistido que contemple los mensajes y el contexto original.</p>{% endif %}
 
     {% if me and me.role in ['owner','admin','reviewer'] and thread.state!='archived' %}
-      <div class="acciones"><form data-api="/api/threads/{{ thread.id }}/ai" data-success="reload"><p class="form-error" role="alert"></p><button type="submit" class="boton" {% if job and job.state in ['queued','running'] %}disabled{% endif %}>Generar ficha con Luna high</button></form></div>
+      <div class="acciones"><form data-api="/api/threads/{{ thread.id }}/ai" data-success="reload"><p class="form-error" role="alert"></p><button type="submit" class="boton" {% if job and job.state in ['queued','running'] %}disabled{% endif %}>Generar borrador de ficha con IA</button></form></div>
       <p class="form-note">La generación envía el hilo y su contexto documental a OpenAI. No edita, aprueba ni archiva.</p>
       {% if job %}<p class="job" {% if job.state in ['queued','running'] %}data-job-pending{% endif %}>Generación: {{ {'queued':'en cola','running':'en proceso','done':'terminada','failed':'no completada'}[job.state] }}. {{ job.error }}{% if job.state in ['queued','running'] %} Esta página se actualizará para mostrar el resultado.{% endif %}</p>{% endif %}
       <details class="editor-ficha"><summary>{{ 'Corregir y guardar ficha de revisión' if payload else 'Elaborar ficha manualmente' }}</summary><form data-api="/api/threads/{{ thread.id }}/review" data-success="reload">
@@ -44,7 +44,7 @@
   </section>
 
   <section class="conversacion"><h2>LA CONVERSACIÓN</h2>
-    {% for c in comments %}<article class="comentario" id="mensaje-{{ c.id }}"><div class="fila"><strong>{{ c.name }}</strong>{% if c.guest_author %}<span class="guest-label">Persona invitada</span>{% endif %}<a href="#mensaje-{{ c.id }}">#{{ c.id }}</a><time datetime="{{ c.created }}">{{ c.created[:16]|replace('T',' ') }} UTC</time></div><p>{{ c.body }}</p></article>{% endfor %}
+    {% for c in comments %}<article class="comentario" id="mensaje-{{ c.id }}"><div class="fila"><strong>{{ c.name }}</strong>{% if c.guest_author %}<span class="guest-label">Persona invitada</span>{% endif %}<a href="#mensaje-{{ c.id }}">#{{ c.id }}</a><time datetime="{{ c.created }}">{{ c.created|hora }}</time></div><p>{{ c.body }}</p></article>{% endfor %}
     {% if thread.state=='archived' %}<p class="aviso">La conversación se conserva en el historial. Un administrador puede reabrirla registrando el motivo.</p>
     {% elif me and not me.must_change and me.role!='reader' %}<form data-api="/api/threads/{{ thread.id }}/comments" data-success="reload"><label>Tu aportación<textarea name="body" rows="4" required maxlength="10000"></textarea></label><p class="form-note">Tu nombre y comentario serán públicos. Puedes referir un mensaje con su número.</p><p class="form-error" role="alert"></p><button class="boton" type="submit">Publicar comentario</button></form>
     {% elif not me and thread.document not in ['bases','directrices','mision','vision','valores','objetivos'] %}<details class="guest-comment"><summary>Aportar sin cuenta</summary><form data-api="/api/participation/submissions" data-success="guest-submission"><input type="hidden" name="submission_type" value="comment"><input type="hidden" name="target_type" value="thread"><input type="hidden" name="target_id" value="{{ thread.id }}" data-number>{% include 'participation/_guest_fields.html' %}<label>Tu aportación<textarea name="body" rows="4" required maxlength="10000"></textarea></label><p class="form-note">Una persona moderadora revisará el mensaje antes de publicarlo. Puedes referir otro mensaje con su número.</p><p class="form-error" role="alert"></p><button class="boton" type="submit">Enviar a moderación</button></form></details><p><a href="/cuenta">Entra con tu cuenta</a> si ya tienes acceso.</p>
@@ -60,6 +60,6 @@
     </form>
   </section>{% endif %}
 
-  <section class="historial"><h2>HISTORIAL DEL HILO</h2><ol>{% for e in events %}<li><strong>{{ e.name or 'Sistema' }}</strong> · {{ e.created[:16]|replace('T',' ') }} UTC<p>{{ e.detail }}</p></li>{% endfor %}</ol></section>
+  <section class="historial"><h2>HISTORIAL DEL HILO</h2><ol>{% for e in events %}<li><strong>{{ e.name or 'Sistema' }}</strong> · {{ e.created|hora }}<p>{{ e.detail }}</p></li>{% endfor %}</ol></section>
 </div>
 {% endblock %}

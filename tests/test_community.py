@@ -255,3 +255,22 @@ def test_moderated_guest_comment_shows_guest_not_moderator(app):
     approved=post(owner,f"/api/participation/submissions/{submission.get_json()['id']}/moderate",{"action":"approve","reason":"Aporte pertinente."});assert approved.status_code==200
     page=guest.get("/trabajo").text
     assert "Luz · Persona invitada" in page and "La sombra cambia por la tarde." in page
+
+
+def test_anonymous_visitors_see_guest_comment_form(app):
+    owner=client(app,"owner");create_open(owner)
+    page=client(app).get("/trabajo").text
+    assert "Comentar sin cuenta" in page
+    assert 'data-api="/api/participation/submissions"' in page and 'name="target_type" value="task"' in page
+    assert "Comentar sin cuenta" not in client(app,"ana").get("/trabajo").text
+
+
+def test_home_shows_pulse_and_first_steps(app):
+    page=client(app).get("/").text
+    assert "EMPIEZA<br>EN TRES PASOS." in page and "Tareas por tomar" in page
+
+
+def test_local_time_uses_monterrey():
+    from app.core import local_time
+    assert local_time("2026-09-21T02:34:00+00:00","%Y-%m-%d %H:%M")=="2026-09-20 20:34"
+    assert local_time("2026-09-21","%Y-%m-%d")=="2026-09-21" and local_time(None,"%Y")is None

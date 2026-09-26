@@ -11,7 +11,7 @@ El despliegue utiliza Gunicorn con dos procesos y dos hilos por proceso, enlazad
 El consumidor de IA procesa tres colas de una en una: fichas de discusiones, consultas
 del asistente y sincronización de mejoras con GitHub. No ejecutar dos consumidores.
 
-El espejo de Proton permanece a cargo de `pls-proton-pull.timer`. Un complemento de su servicio ejecuta `scripts/indexar_proton.py` después de cada sincronización correcta. La aplicación nunca recibe credenciales de Proton ni consulta Proton durante una visita pública: sirve únicamente elementos aprobados por el índice local.
+El espejo de Proton depende de `pls-proton-pull.timer`. **Estado al 26 de septiembre de 2026:** la unidad base de esa sincronización no existe desde el incidente del 17 de septiembre; solo sobrevive su complemento. `/archivo-proton` sirve la fotografía del 13 de septiembre hasta reconstruir la unidad (ver `VPS_OPERATIONS_NOTE.md`). Un complemento de su servicio ejecuta `scripts/indexar_proton.py` después de cada sincronización correcta. La aplicación nunca recibe credenciales de Proton ni consulta Proton durante una visita pública: sirve únicamente elementos aprobados por el índice local.
 
 Estado:
 
@@ -22,9 +22,9 @@ systemctl --user is-active pls-assistant-sources.timer
 systemctl --user list-timers pls-proton-pull.timer pls-assistant-sources.timer
 ```
 
-`pls-assistant-sources.timer` es la unidad diaria prevista para refrescar la caché
-allowlisted del asistente. Si todavía no está instalada, el segundo comando lo hará
-visible como ausente; usar mientras tanto la actualización manual descrita abajo.
+`pls-assistant-sources.timer` refresca diariamente la caché allowlisted del asistente.
+Está instalado y activo; su ejecución del 26 de septiembre de 2026 actualizó 14 fuentes
+sin pendientes. Si falla, usar la actualización manual descrita abajo.
 
 Las cuentas se crean una vez mediante `scripts/inicializar.py`. El administrador general puede cambiar permisos, desactivar cuentas y restablecer contraseñas desde `/administracion`. Una cuenta inicial no se marca automáticamente como miembro oficial.
 

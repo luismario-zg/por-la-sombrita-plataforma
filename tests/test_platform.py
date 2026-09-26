@@ -69,7 +69,7 @@ def test_primary_navigation_has_unified_entries_and_mobile_control(app):
     assert public.status_code==200
     assert b'aria-controls="navegacion-principal"' in public.data
     assert b'data-nav-open="false"' in public.data
-    assert b'>Chatbot</a>' in public.data and b'>Asistente</a>' not in public.data
+    assert '>Pregúntale</a>'.encode() in public.data and b'>Asistente</a>' not in public.data
     assert public.data.count(b'class="nav-entry"')==4
     assert b'<summary class="nav-entry">Conocimiento</summary>' in public.data
     owner=client(app,'owner').get('/')

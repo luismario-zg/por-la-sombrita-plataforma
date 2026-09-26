@@ -26,7 +26,7 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Con permiso de Desarrollador, consultar la planeación técnica, guardar respuestas con historial y mantener visibles preguntas pendientes, trabajo en proceso e implementaciones terminadas.
 - Dictar una respuesta desde el micrófono para obtener un borrador editable; el audio no se conserva y la transcripción nunca se guarda automáticamente.
 
-No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El asistente no tiene herramientas y no recibe fuentes privadas. Sus preguntas y respuestas solo se consultan desde la sesión que las creó y el consumidor elimina de la plataforma los registros con más de 24 horas. El administrador general inicial es Luis Mario; las otras ocho cuentas iniciales son participantes. Las credenciales se generan localmente y nunca están incluidas en este repositorio.
+No hay votaciones automáticas ni inferencia de consenso por IA. Los resúmenes son propuestas revisables. El asistente no tiene herramientas y no recibe fuentes privadas. Sus preguntas y respuestas solo se consultan desde la sesión que las creó y el consumidor elimina de la plataforma los registros con más de 24 horas. El administrador general inicial es Luis Mario. Los roles y membresías vigentes se consultan en `/miembros`; pueden cambiar desde `/administracion` y no se replican en este archivo. Las credenciales se generan localmente y nunca están incluidas en este repositorio.
 
 ## Ejecutar localmente
 
@@ -93,6 +93,10 @@ El indexador solo acepta elementos bajo `Por La Sombrita MTY General`. Excluye r
 - [Resúmenes temporales y migración a modelo local](docs/RESUMENES.md).
 - [Desarrollo futuro](docs/ROADMAP.md).
 - [Procedencia de contenido y diseño](docs/FUENTES.md).
+
+## Rama desplegada
+
+Al 26 de septiembre de 2026 el sitio publicado se ejecuta desde la rama `ops/reactivacion-2026-09-18`; `main` quedó en la versión del archivo público de Proton y no incluye la evolución comunitaria, el editor Markdown ni la navegación actual. Hasta integrar esa rama, consultar el código vigente en ella.
 
 ## Comprobar
 

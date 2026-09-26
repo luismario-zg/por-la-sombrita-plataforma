@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib, re, secrets, sqlite3, time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 import bleach
 from flask import current_app, g, abort, request
@@ -22,9 +23,27 @@ LEFT JOIN guest_attributions ga ON ga.target_type='thread' AND ga.target_id=t.id
 
 def now(): return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
+MONTERREY_TZ=ZoneInfo('America/Monterrey')
+
+def local_time(value,pattern):
+    """Convierte una marca ISO (UTC si no trae zona) a hora de Monterrey; conserva el texto si no es fecha."""
+    if not value or 'T' not in str(value):return value
+    try:parsed=datetime.fromisoformat(str(value))
+    except ValueError:return value
+    if parsed.tzinfo is None:parsed=parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(MONTERREY_TZ).strftime(pattern)
+
 def connect(path):
     c=sqlite3.connect(path,timeout=15); c.row_factory=sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON');c.execute('PRAGMA busy_timeout=15000');c.execute('PRAGMA journal_mode=WAL')
+    c.execute('PRAGMA foreign_keys=ON');c.execute('PRAGMA busy_timeout=15000')
+    # Cambiar a WAL puede devolver SQLITE_BUSY sin pasar por busy_timeout cuando
+    # varios workers abren una base nueva a la vez; se reintenta con espera acotada.
+    deadline=time.monotonic()+15
+    while True:
+        try:c.execute('PRAGMA journal_mode=WAL');break
+        except sqlite3.OperationalError as error:
+            if 'locked' not in str(error) or time.monotonic()>deadline:raise
+            time.sleep(0.05)
     return c
 
 def db():

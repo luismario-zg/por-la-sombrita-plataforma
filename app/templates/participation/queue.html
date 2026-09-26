@@ -5,7 +5,7 @@
   <p class="texto-grande">Las personas invitadas pueden proponer conversaciones y comentarios. Publicar conserva su nombre elegido; la cuenta moderadora y los datos de contacto no se presentan como autoría.</p>
   {% for item in submissions %}
   <article class="moderation-card">
-    <div class="fila"><span class="badge">Pendiente #{{ item.id }}</span><strong>{{ item.display_name }}</strong><time datetime="{{ item.created }}">{{ item.created[:16]|replace('T',' ') }} UTC</time></div>
+    <div class="fila"><span class="badge">Pendiente #{{ item.id }}</span><strong>{{ item.display_name }}</strong><time datetime="{{ item.created }}">{{ item.created|hora }}</time></div>
     <h2>{{ item.title or 'Comentario invitado' }}</h2>
     <p class="metadata">{{ item.target_label }} · {{ 'Nueva discusión' if item.submission_type=='thread' else 'Comentario' }}</p>
     {% if item.quote %}<blockquote>{{ item.quote }}</blockquote>{% endif %}

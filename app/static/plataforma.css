@@ -23,3 +23,27 @@
 .markdown-editor-page>h1{font-size:clamp(3.1rem,6vw,5.8rem);margin:18px 0 24px}.markdown-editor-page>.texto-grande{max-width:880px}.markdown-guide{border:1px solid var(--oliva);background:var(--claro);padding:18px 22px;margin:30px 0}.markdown-guide summary{cursor:pointer;font-weight:800}.markdown-guide-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}.markdown-guide-grid>div{display:grid;gap:5px;border-left:3px solid var(--amarillo);padding:9px 11px;background:var(--papel)}.markdown-guide-grid code{font-size:.78rem;font-weight:700}.markdown-guide-grid span{font-size:.72rem}.markdown-guide p{margin:12px 0 0;font-size:.82rem}.markdown-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start;margin:35px 0}.markdown-compose,.markdown-preview-pane{min-width:0;border:1px solid var(--arena);background:var(--claro);padding:18px}.markdown-pane-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:15px}.markdown-pane-head h2{font-size:2rem}.markdown-pane-head>span{font-size:.65rem;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:var(--gris)}.markdown-toolbar{display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:var(--papel);border:1px solid var(--arena);border-bottom:0}.markdown-toolbar button{border:1px solid var(--oliva);background:var(--claro);min-height:38px;padding:6px 10px;font:700 .74rem/1 Arial,sans-serif;cursor:pointer}.markdown-toolbar button:hover,.markdown-toolbar button:focus-visible{background:var(--amarillo)}textarea.markdown-source{min-height:680px;margin:0;border-color:var(--arena);font:15px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}.markdown-preview-status{min-height:24px;margin:0 0 10px;font-size:.74rem;color:var(--gris)}.markdown-preview{height:680px;overflow:auto;padding:22px;background:var(--papel);border:1px solid var(--arena)}.markdown-preview h2{font-size:2rem}.markdown-preview h3{font-size:1.35rem}.markdown-preview .tabla-scroll{max-width:100%}.editor-metadata{max-width:850px;margin-top:35px;padding-top:30px;border-top:2px solid var(--tinta)}.editor-metadata h2{font-size:2.6rem}.editor-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.editor-metadata output{margin-top:18px}
 @media(max-width:980px){.markdown-workspace{grid-template-columns:1fr}.markdown-preview{height:auto;min-height:420px;max-height:680px}.markdown-guide-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.markdown-editor-page{width:calc(100% - 28px)}.markdown-guide{padding:15px}.markdown-guide-grid{grid-template-columns:1fr 1fr}.markdown-workspace{margin-top:24px}.markdown-compose,.markdown-preview-pane{padding:12px}textarea.markdown-source{min-height:520px}.editor-meta-grid{grid-template-columns:1fr}.markdown-toolbar button{flex:1 0 auto}}
+/* Portada: primeros pasos, pulso de actividad y documentos jerarquizados */
+.pasos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pasos li{background:var(--claro);border:1.5px solid var(--tinta);padding:24px 21px;display:flex;flex-direction:column;gap:10px}
+.pasos h3{font-family:Barlow,Arial,sans-serif;font-size:1.7rem;line-height:1.05;margin:0}
+.pasos p{margin:0;flex:1}
+.paso-num{font-family:Barlow,Arial,sans-serif;font-size:2.6rem;line-height:1;color:var(--oliva)}
+.pulso{display:grid;grid-template-columns:repeat(4,1fr);margin:34px 0 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--arena)}
+.pulso div{padding:18px 12px 16px 0}
+.pulso dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--gris)}
+.pulso dd{margin:4px 0 0;font-family:Barlow,Arial,sans-serif;font-size:2.8rem;line-height:1}
+.subtitulo-docs{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;margin:34px 0 16px}
+.lista-docs{list-style:none;margin:0;padding:0;border-top:2px solid var(--tinta)}
+.lista-docs li{display:flex;justify-content:space-between;align-items:baseline;gap:18px;border-bottom:1px solid var(--arena);padding:14px 0}
+.lista-docs a{text-decoration:none;display:flex;flex-direction:column}
+.lista-docs a:hover strong{text-decoration:underline}
+.lista-docs strong{font-family:Barlow,Arial,sans-serif;font-size:1.35rem;font-weight:700}
+.lista-docs span{color:var(--gris);font-size:.92rem}
+.lista-docs small{white-space:nowrap;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+.miembros-intro{margin-top:22px;max-width:760px}
+.miembros-resumen{font-weight:700;margin:26px 0 18px}
+.personas small strong{font-weight:700}
+.miembros-cta{margin-top:30px}
+.community-comments .guest-comment{margin-top:14px}
+@media(max-width:760px){.pasos{grid-template-columns:1fr}.pulso{grid-template-columns:repeat(2,1fr)}.pulso dd{font-size:2.2rem}.lista-docs li{flex-direction:column;gap:6px}}

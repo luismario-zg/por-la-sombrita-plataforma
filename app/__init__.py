@@ -95,6 +95,16 @@ def create_app(config=None):
     def context():return dict(me=user(),roles=ROLES,states=STATES,base_url=app.config['BASE_URL'],nonce=g.nonce,
         editor_allowed=editor_allowed,moderator_allowed=moderator_allowed,protected_documents=PROTECTED_DOCUMENTS)
 
+    @app.template_filter('hora')
+    def hora(value):
+        """Fecha y hora de Monterrey para marcas guardadas en UTC."""
+        return local_time(value,'%Y-%m-%d %H:%M')
+
+    @app.template_filter('fecha')
+    def fecha(value):
+        """Fecha de Monterrey para marcas guardadas en UTC."""
+        return local_time(value,'%Y-%m-%d')
+
     @app.template_filter('filesize')
     def filesize(value):
         size=float(value or 0)
@@ -127,7 +137,14 @@ def create_app(config=None):
     def home():
         docs=db().execute('SELECT slug,title,intro,status,version FROM documents WHERE hidden=0 ORDER BY rowid').fetchall()
         threads=db().execute(THREAD_SELECT+' ORDER BY t.updated DESC,t.id DESC LIMIT 4').fetchall()
-        return render_template('home.html',title='Una ciudad más caminable',docs=docs,threads=threads)
+        since=datetime.fromtimestamp(time.time()-30*86400,timezone.utc).isoformat(timespec='seconds')
+        pulse=dict(
+            conversaciones=db().execute("SELECT COUNT(*) FROM threads WHERE state<>'archived'").fetchone()[0],
+            aportaciones=db().execute('SELECT (SELECT COUNT(*) FROM comments WHERE created>=?)+(SELECT COUNT(*) FROM community_comments WHERE created>=?)',(since,since)).fetchone()[0],
+            tareas=db().execute("SELECT COUNT(*) FROM community_tasks WHERE state='open'").fetchone()[0],
+            personas=db().execute('SELECT COUNT(*) FROM users WHERE active=1').fetchone()[0])
+        return render_template('home.html',title='Una ciudad más caminable',docs=docs,threads=threads,pulse=pulse,
+            description='Por la Sombrita es una comunidad ciudadana de Monterrey que investiga y propone sombra para caminar con menos calor. Lee, comenta y súmate.')
 
     @app.get('/planeacion-desarrollo-plataforma')
     def development_plan():

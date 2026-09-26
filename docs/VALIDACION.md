@@ -1,5 +1,25 @@
 # Validación del primer prototipo
 
+## Revisión y mejoras del 26 de septiembre de 2026
+
+Recorrido con Chromium a 1440 px y 390 px de 22 rutas públicas del sitio publicado: sin
+errores de JavaScript ni desbordamiento horizontal. Se detectaron y corrigieron:
+
+- **Comentarios invitados en Trabajo, Actividades, Convocatorias y Rolitas.** El servidor
+  ya los aceptaba, pero `community/_comments.html` solo ofrecía «Inicia sesión». Ahora
+  muestra «Comentar sin cuenta» con moderación previa.
+- **Arranque paralelo de workers.** `test_parallel_startup_serializes_schema_migrations`
+  fallaba de forma intermitente; una prueba de estrés reprodujo 13 fallos en 150
+  arranques por `database is locked` al activar WAL. `connect()` reintenta ese cambio con
+  espera acotada; después, 0 fallos en 150 arranques.
+- Fechas en hora de Monterrey (filtros `hora` y `fecha`) en lugar de UTC.
+- Portada con el problema, tres primeros pasos, indicadores de actividad, documentos
+  esenciales destacados y el bot de rutas; `/miembros` con una sola lista; menú
+  «Pregúntale» y textos de IA sin jerga interna.
+
+La suite completa quedó en 67 pruebas aprobadas. Una vista previa local con copia de la
+base confirmó las rutas modificadas antes de publicar.
+
 ## Evolución del 21 de septiembre de 2026
 
 La suite completa pasó 57 pruebas. Después del ajuste de visibilidad de convocatorias
