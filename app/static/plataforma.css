@@ -24,10 +24,10 @@
 @media(max-width:980px){.markdown-workspace{grid-template-columns:1fr}.markdown-preview{height:auto;min-height:420px;max-height:680px}.markdown-guide-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.markdown-editor-page{width:calc(100% - 28px)}.markdown-guide{padding:15px}.markdown-guide-grid{grid-template-columns:1fr 1fr}.markdown-workspace{margin-top:24px}.markdown-compose,.markdown-preview-pane{padding:12px}textarea.markdown-source{min-height:520px}.editor-meta-grid{grid-template-columns:1fr}.markdown-toolbar button{flex:1 0 auto}}
 /* Portada: primeros pasos, pulso de actividad y documentos jerarquizados */
-.pasos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.pasos li{background:var(--claro);border:1.5px solid var(--tinta);padding:24px 21px;display:flex;flex-direction:column;gap:10px}
-.pasos h3{font-family:Barlow,Arial,sans-serif;font-size:1.7rem;line-height:1.05;margin:0}
-.pasos p{margin:0;flex:1}
+.primeros-pasos{list-style:none;font-weight:400;font-size:inherit;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.primeros-pasos li{background:var(--claro);border:1.5px solid var(--tinta);padding:24px 21px;display:flex;flex-direction:column;gap:10px}
+.primeros-pasos h3{font-family:Barlow,Arial,sans-serif;font-size:1.7rem;line-height:1.05;margin:0}
+.primeros-pasos p{margin:0;flex:1}
 .paso-num{font-family:Barlow,Arial,sans-serif;font-size:2.6rem;line-height:1;color:var(--oliva)}
 .pulso{display:grid;grid-template-columns:repeat(4,1fr);margin:34px 0 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--arena)}
 .pulso div{padding:18px 12px 16px 0}
@@ -46,4 +46,4 @@
 .personas small strong{font-weight:700}
 .miembros-cta{margin-top:30px}
 .community-comments .guest-comment{margin-top:14px}
-@media(max-width:760px){.pasos{grid-template-columns:1fr}.pulso{grid-template-columns:repeat(2,1fr)}.pulso dd{font-size:2.2rem}.lista-docs li{flex-direction:column;gap:6px}}
+@media(max-width:760px){.primeros-pasos{grid-template-columns:1fr}.pulso{grid-template-columns:repeat(2,1fr)}.pulso dd{font-size:2.2rem}.lista-docs li{flex-direction:column;gap:6px}}

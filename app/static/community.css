@@ -7,3 +7,7 @@
 .task-index a{font-weight:700}
 .task-index-state{font-size:.78rem;color:var(--gris);text-align:right}
 @media(max-width:760px){.task-index li{grid-template-columns:1fr auto}.task-index-state{grid-column:1/-1;text-align:left}}
+.task-done{background:var(--claro);border-left:6px solid var(--oliva);padding:12px 16px;margin:14px 0}
+.task-done-create{margin-top:6px}
+.task-done-create .community-form-grid{margin-top:12px}
+.task-done-note{margin:-6px 0 14px;padding:0 16px 12px 22px;font-size:.9rem}

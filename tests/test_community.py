@@ -282,3 +282,36 @@ def test_work_page_lists_task_index_when_many(app):
         post(owner,"/api/community/tasks",{"title":f"Tarea {n}","description":"Descripción.","reference":"","priority":"normal"})
     page=client(app).get("/trabajo").text
     assert 'class="task-index"' in page and 'href="#tarea-6"' in page
+
+
+def test_report_task_done_in_past_with_account_or_name(app):
+    owner=client(app,"owner");create_open(owner)
+    ana=client(app,"ana")
+    with connect(app.config["DATABASE"]) as connection:
+        beto=connection.execute("SELECT id FROM users WHERE username='beto'").fetchone()["id"]
+    future=(datetime.now(ZoneInfo("America/Monterrey")).date()+timedelta(days=1)).isoformat()
+    assert post(ana,"/api/community/tasks/1/done",{"completed_on":future,"performer_id":beto,"note":"Hecho."}).status_code==400
+    assert post(ana,"/api/community/tasks/1/done",{"completed_on":"2026-09-04","performer_id":beto,"performer_name":"Otra","note":"Hecho."}).status_code==400
+    assert post(ana,"/api/community/tasks/1/done",{"completed_on":"2026-09-04","performer_id":None,"performer_name":"","note":"Hecho."}).status_code==400
+    assert post(client(app),"/api/community/tasks/1/done",{"completed_on":"2026-09-04","performer_id":beto,"note":"Hecho."}).status_code in (401,403)
+    done=post(ana,"/api/community/tasks/1/done",{"completed_on":"2026-09-04","performer_id":beto,"performer_name":"","note":"Reunión realizada; minuta en Proton."})
+    assert done.status_code==200
+    with connect(app.config["DATABASE"]) as connection:
+        task=connection.execute("SELECT * FROM community_tasks WHERE id=1").fetchone()
+        assert (task["state"],task["completed_on"],task["completed_by"])==("closed","2026-09-04",beto)
+        assert connection.execute("SELECT closed_by FROM community_tasks WHERE id=1").fetchone()[0]!=beto
+        event=connection.execute("SELECT detail FROM community_task_events WHERE task_id=1 AND kind='reported_done'").fetchone()["detail"]
+        assert "Ana reportó que Beto realizó la tarea el 2026-09-04" in event
+    assert post(ana,"/api/community/tasks/1/done",{"completed_on":"2026-09-04","performer_id":beto,"note":"Otra vez."}).status_code==409
+    page=client(app).get("/trabajo").text
+    assert "Realizada por Beto el 2026-09-04." in page and "Reportó Ana." in page
+
+
+def test_create_task_already_done_by_person_without_account(app):
+    ana=client(app,"ana")
+    created=post(ana,"/api/community/tasks",{"title":"Crear Linktree","description":"Centralizar recursos.","reference":"minuta 25-ago","priority":"normal","already_done":True,"completed_on":"2026-08-27","performer_id":None,"performer_name":"Natanael","note":"Enlace en el Linktree."})
+    assert created.status_code==201 and created.get_json()["state"]=="closed"
+    page=client(app).get("/trabajo").text
+    assert "Realizada por Natanael el 2026-08-27." in page
+    normal=post(ana,"/api/community/tasks",{"title":"Abierta","description":"Sin realizar.","reference":"","priority":"normal","already_done":False,"completed_on":"","performer_id":None,"performer_name":"","note":""})
+    assert normal.status_code==201 and normal.get_json()["state"]=="open"

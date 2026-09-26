@@ -37,6 +37,12 @@ def init_community_schema(connection):
         if "creator" not in columns:
             connection.execute("ALTER TABLE community_calls ADD COLUMN creator INTEGER REFERENCES users(id)")
             connection.execute("UPDATE community_calls SET creator=updated_by WHERE creator IS NULL")
+        task_columns={row["name"] for row in connection.execute("PRAGMA table_info(community_tasks)")}
+        if "completed_on" not in task_columns:
+            # Registro de trabajo realizado antes de reportarlo en la plataforma.
+            connection.execute("ALTER TABLE community_tasks ADD COLUMN completed_on TEXT")
+            connection.execute("ALTER TABLE community_tasks ADD COLUMN completed_by INTEGER REFERENCES users(id)")
+            connection.execute("ALTER TABLE community_tasks ADD COLUMN completed_by_name TEXT NOT NULL DEFAULT ''")
         connection.commit()
     except Exception:
         connection.rollback()
@@ -100,6 +106,51 @@ def _local_date(value, key="due_date"):
     return parsed.isoformat()
 
 
+def _past_date(value, key="completed_on"):
+    """Fecha local de un trabajo ya realizado: hoy o antes."""
+    if not isinstance(value, str):
+        abort(400, description="Indica la fecha en que se realizó.")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        abort(400, description=f"Revisa la fecha de {key}.")
+    if parsed > datetime.now(MONTERREY).date():
+        abort(400, description="La fecha de realización no puede ser futura.")
+    if parsed.year < 2020:
+        abort(400, description=f"Revisa la fecha de {key}.")
+    return parsed.isoformat()
+
+
+def _completion(connection, payload):
+    """Valida quién y cuándo realizó una tarea; exige una cuenta o un nombre, no ambos."""
+    completed_on = _past_date(payload.get("completed_on"))
+    performer = _identifier(payload, "performer_id")
+    performer_name = _optional_text(payload, "performer_name", 160)
+    if bool(performer) == bool(performer_name):
+        abort(400, description="Elige una persona con cuenta o escribe el nombre de quien la realizó.")
+    if performer:
+        row = connection.execute("SELECT name FROM users WHERE id=? AND active=1", (performer,)).fetchone()
+        if not row:
+            abort(400, description="La persona elegida no está disponible.")
+        display = row["name"]
+    else:
+        display = performer_name
+    note = field(payload, "note", 3000)
+    return completed_on, performer, performer_name, display, note
+
+
+def _record_completion(connection, ident, actor, completion):
+    completed_on, performer, performer_name, display, note = completion
+    stamp = now()
+    connection.execute(
+        """UPDATE community_tasks SET state='closed',closed=?,closed_by=?,close_note=?,completed_on=?,
+        completed_by=?,completed_by_name=?,updated=? WHERE id=?""",
+        (stamp, actor["id"], note, completed_on, performer, performer_name, stamp, ident),
+    )
+    _event(connection, ident, actor["id"], "reported_done",
+           f"{actor['name']} reportó que {display} realizó la tarea el {completed_on}. {note}")
+
+
 def _format_local(value, date_only=False):
     if not value:
         return ""
@@ -115,9 +166,12 @@ def _input_local(value):
 
 def _task_from(connection,ident):
     row = connection.execute(
-        """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name
+        """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name,
+        COALESCE(performer.name,NULLIF(t.completed_by_name,'')) AS performer_name,closer.name AS closer_name
         FROM community_tasks t JOIN users creator ON creator.id=t.creator
-        LEFT JOIN users assignee ON assignee.id=t.assignee WHERE t.id=?""",
+        LEFT JOIN users assignee ON assignee.id=t.assignee
+        LEFT JOIN users performer ON performer.id=t.completed_by
+        LEFT JOIN users closer ON closer.id=t.closed_by WHERE t.id=?""",
         (ident,),
     ).fetchone()
     if not row:
@@ -208,9 +262,12 @@ def work():
     if current:
         sync_task_notifications(db())
     tasks = db().execute(
-        """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name
+        """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name,
+        COALESCE(performer.name,NULLIF(t.completed_by_name,'')) AS performer_name,closer.name AS closer_name
         FROM community_tasks t JOIN users creator ON creator.id=t.creator
         LEFT JOIN users assignee ON assignee.id=t.assignee
+        LEFT JOIN users performer ON performer.id=t.completed_by
+        LEFT JOIN users closer ON closer.id=t.closed_by
         ORDER BY t.state='closed',CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated DESC"""
     ).fetchall()
     task_data = []
@@ -229,12 +286,13 @@ def work():
     people = db().execute(
         "SELECT id,name FROM users WHERE active=1 AND role IN ('owner','admin','reviewer','member') ORDER BY name"
     ).fetchall() if current else []
+    everyone = db().execute("SELECT id,name FROM users WHERE active=1 ORDER BY name").fetchall() if current else []
     notifications = db().execute(
         "SELECT * FROM community_notifications WHERE user_id=? ORDER BY read_at IS NULL DESC,id DESC LIMIT 30",
         (current["id"],),
     ).fetchall() if current else []
     return render_template(
-        "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people,
+        "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people, everyone=everyone, today=datetime.now(MONTERREY).date().isoformat(),
         priorities=PRIORITIES, task_states=TASK_STATES, notifications=notifications,
     )
 
@@ -287,6 +345,9 @@ def create_task():
     title=field(payload,"title",160);description=field(payload,"description",6000);reference=_optional_text(payload,"reference",500)
     priority=payload.get("priority","normal")
     if priority not in PRIORITIES:abort(400,description="Revisa la prioridad.")
+    completion=None
+    if payload.get("already_done") is True:
+        completion=_completion(db(),payload);payload={**payload,"assignee_id":None}
     assignee=_identifier(payload,"assignee_id")
     due=None
     if assignee==actor["id"]:due=_local_date(payload.get("due_date"))
@@ -298,7 +359,10 @@ def create_task():
     detail="Se creó como tarea abierta."
     if state=="in_progress":detail=f"La persona creadora asumió la responsabilidad con plazo {due}."
     elif state=="pending_acceptance":detail="Se propuso una persona responsable; falta su respuesta y fecha comprometida."
+    if completion:detail="Se registró como trabajo ya realizado."
     event_id=_event(connection,ident,actor["id"],"created",detail).lastrowid
+    if completion:
+        _record_completion(connection,ident,actor,completion);connection.commit();return jsonify(id=ident,state="closed"),201
     if state=="pending_acceptance":_notify(connection,assignee,ident,"assignment",f"Te proponen una tarea: {title}","Acepta o rechaza la responsabilidad y, al aceptar, indica tu plazo.",f"assignment:{ident}:{event_id}:{assignee}")
     connection.commit();return jsonify(id=ident,state=state),201
 
@@ -380,6 +444,15 @@ def close_task(ident):
     connection=db();connection.execute("BEGIN IMMEDIATE");task=_task_from(connection,ident)
     if task["state"]=="closed":abort(409,description="La tarea ya está cerrada.")
     stamp=now();connection.execute("UPDATE community_tasks SET state='closed',closed=?,closed_by=?,close_note=?,updated=? WHERE id=?",(stamp,actor["id"],note,stamp,ident));_event(connection,ident,actor["id"],"closed",note);connection.commit();return jsonify(ok=True)
+
+
+@bp.post("/api/community/tasks/<int:ident>/done")
+def report_done(ident):
+    """Registra que la tarea ya se realizó: fecha real, quién la hizo y evidencia; quien reporta queda en el historial."""
+    actor=require(*PARTICIPANT_ROLES);payload=_json_body()
+    connection=db();connection.execute("BEGIN IMMEDIATE");task=_task_from(connection,ident)
+    if task["state"]=="closed":abort(409,description="La tarea ya está cerrada.")
+    _record_completion(connection,ident,actor,_completion(connection,payload));connection.commit();return jsonify(ok=True)
 
 
 @bp.post("/api/community/notifications/<int:ident>/read")

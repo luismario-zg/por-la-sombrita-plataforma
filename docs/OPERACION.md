@@ -81,7 +81,13 @@ específico.
 Las rutas públicas `/trabajo`, `/actividades`, `/convocatorias` y `/rolitas` comparten
 comentarios y aceptan aportaciones invitadas moderadas. Las tareas conservan propuesta
 de responsable, aceptación/rechazo, plazo, entregable, revisión, cierre, eventos y
-notificaciones. Las actividades solo las crean o editan cuentas administradoras. Las
+notificaciones. Cualquier cuenta participante puede **reportar como ya realizada** una
+tarea abierta —o crearla directamente como realizada— indicando la fecha real (hoy o
+antes), quién la hizo (una cuenta activa o el nombre de alguien sin cuenta) y la
+evidencia. La tarea queda cerrada; el historial conserva quién lo reportó y cuándo. No
+existe todavía reapertura de tareas cerradas: un reporte erróneo se corrige comentando
+en la tarjeta y abriendo una nueva. Las actividades solo las crean o editan cuentas
+administradoras. Las
 convocatorias las puede crear una cuenta participante; editarlas requiere permiso de
 Editor.
 
