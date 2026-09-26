@@ -274,3 +274,11 @@ def test_local_time_uses_monterrey():
     from app.core import local_time
     assert local_time("2026-09-21T02:34:00+00:00","%Y-%m-%d %H:%M")=="2026-09-20 20:34"
     assert local_time("2026-09-21","%Y-%m-%d")=="2026-09-21" and local_time(None,"%Y")is None
+
+
+def test_work_page_lists_task_index_when_many(app):
+    owner=client(app,"owner")
+    for n in range(6):
+        post(owner,"/api/community/tasks",{"title":f"Tarea {n}","description":"Descripción.","reference":"","priority":"normal"})
+    page=client(app).get("/trabajo").text
+    assert 'class="task-index"' in page and 'href="#tarea-6"' in page
