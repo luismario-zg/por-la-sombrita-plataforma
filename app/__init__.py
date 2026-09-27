@@ -70,12 +70,12 @@ def create_app(config=None):
     @app.before_request
     def protect():
         g.nonce=secrets.token_urlsafe(18)
-        if request.endpoint in ['development_transcribe','voice_transcribe']:request.max_content_length=app.config['TRANSCRIBE_MAX_BYTES']+65536
+        if request.endpoint in ['development_transcribe','voice_transcribe','thread_transcribe']:request.max_content_length=app.config['TRANSCRIBE_MAX_BYTES']+65536
         if app.config['BASE_URL'].startswith('https://') and request.headers.get('X-Forwarded-Proto')=='http':
             return redirect(app.config['BASE_URL']+request.full_path.rstrip('?'),code=301)
         if request.method in {'POST','PUT','PATCH','DELETE'}:
             if request.headers.get('Origin')!=app.config['BASE_URL']:abort(403,description='Origen de solicitud no permitido.')
-            if request.endpoint not in ['development_transcribe','voice_transcribe'] and not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
+            if request.endpoint not in ['development_transcribe','voice_transcribe','thread_transcribe'] and not request.is_json:abort(415,description='Se requiere una solicitud JSON.')
             user()
             if not g.session or not hmac.compare_digest(request.headers.get('X-CSRF-Token',''),g.session['csrf']):abort(403,description='La sesión de formulario expiró. Recarga la página.')
 
@@ -410,8 +410,12 @@ def create_app(config=None):
     def voice_transcribe():
         return voice_response(require())
 
-    def voice_response(u):
-        if u['membership']!='official':abort(403,description='El dictado requiere una cuenta con membresía validada.')
+    @app.post('/api/threads/transcribe')
+    def thread_transcribe():
+        return voice_response(require('owner','admin','reviewer','member'),require_membership=False)
+
+    def voice_response(u,require_membership=True):
+        if require_membership and u['membership']!='official':abort(403,description='El dictado requiere una cuenta con membresía validada.')
         limited('development-transcribe:'+str(u['id']),30,3600)
         audio=request.files.get('audio')
         if not audio:abort(400,description="Falta el archivo de audio (campo 'audio').")

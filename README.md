@@ -9,6 +9,7 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Leer documentos, versiones, discusiones e historial sin cuenta.
 - Entrar con usuario y contraseña y regresar a la página de origen, incluidos filtros y sección; si la contraseña es provisional, conservar ese destino después del cambio obligatorio.
 - Comentar una sección como administrador para registrar un pendiente público en Mejoras, con sección, versión y texto de origen preservados; admite dictado para cuentas con membresía validada.
+- Dictar comentarios sobre secciones o frases seleccionadas con una cuenta habilitada para participar, sin exigir membresía oficial; revisar el borrador antes de publicarlo.
 - Seleccionar una frase o comentar una sección completa; conservar cita, contexto y versión de origen.
 - Reconocer citas en el documento actual mediante resaltado cuando todavía coinciden; conservar siempre la versión original si el texto cambia.
 - Comentar con nombre y fecha; conservar los mensajes sin edición ni borrado en esta primera versión.
