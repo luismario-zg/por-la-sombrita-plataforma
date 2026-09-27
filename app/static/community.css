@@ -3,7 +3,7 @@
 @media print{.community-nav,.community-panel,.task-actions,.community-comments form,.community-notifications form{display:none!important}.task-card,.activity-card,.call-card{break-inside:avoid}.call-card{display:block}.call-card img{max-width:240px;float:left;margin:0 20px 15px 0}}
 .task-index{margin:0 0 36px;border-top:2px solid var(--tinta)}
 .task-index ol{list-style:none;margin:0;padding:0;counter-reset:tarea}
-.task-index li{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(150px,auto);gap:14px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--arena)}
+.task-index li{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(150px,auto);gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--arena)}
 .task-index a{font-weight:700}
 .task-index-state{font-size:.78rem;color:var(--gris);text-align:right}
 @media(max-width:760px){.task-index li{grid-template-columns:1fr auto}.task-index-state{grid-column:1/-1;text-align:left}}
@@ -12,6 +12,43 @@
 .task-done-create .community-form-grid{margin-top:12px}
 .task-done-note{margin:-6px 0 14px;padding:0 16px 12px 22px;font-size:.9rem}
 
-/* Etiqueta temática, independiente de la prioridad y del estado. */
-.task-category{display:inline-block;border:1px solid var(--arena);border-radius:12px;padding:2px 9px;margin:2px 6px 2px 0;font:600 .7rem/1.5 Arial,sans-serif;color:var(--oliva);background:var(--claro)}
-.task-category-edit{margin-block:12px;font-size:.8rem}
+/* Etiquetas de tarea: categoría, prioridad y estado con un solo lenguaje visual.
+   Para participantes, categoría y prioridad son botones que abren sus opciones y guardan al elegir. */
+.task-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;border:1px solid var(--tinta);background:var(--claro);color:var(--tinta);padding:4px 10px;font:700 .74rem/1.2 Arial,sans-serif;white-space:nowrap}
+.chip-key{font-size:.6rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.7}
+.chip-category{border-color:var(--oliva);color:var(--oliva)}
+.priority-urgent.chip,.chip-options .priority-urgent{background:#8c2520;border-color:#8c2520;color:#fff}
+.priority-high.chip,.chip-options .priority-high{background:var(--amarillo)}
+.priority-low.chip{border-style:dashed;color:var(--gris)}
+.chip.state-open{background:var(--claro)}
+.chip.state-in_progress{background:var(--tinta);color:var(--claro)}
+.chip-menu{position:relative;display:inline-block}
+.chip-menu>summary{list-style:none;cursor:pointer}
+.chip-menu>summary::-webkit-details-marker,.task-actions summary::-webkit-details-marker{display:none}
+.chip-menu>summary:hover,.chip-menu[open]>summary{box-shadow:3px 3px 0 var(--tinta)}
+.chip-menu>summary:focus-visible,.task-actions summary:focus-visible{outline:3px solid var(--amarillo);outline-offset:2px}
+.chip-caret{font-size:.7rem;margin-left:2px}
+.chip-options{position:absolute;z-index:20;top:calc(100% + 6px);left:0;display:grid;gap:3px;min-width:210px;max-width:calc(100vw - 40px);background:var(--claro);border:2px solid var(--tinta);box-shadow:5px 5px 0 var(--tinta);padding:8px}
+.chip-options-title{margin:2px 4px 6px;font:800 .62rem/1.2 Arial,sans-serif;text-transform:uppercase;color:var(--gris)}
+.chip-options button{border:1px solid transparent;background:var(--claro);color:var(--tinta);padding:9px 10px;text-align:left;font:700 .8rem/1.2 Arial,sans-serif;cursor:pointer}
+.chip-options button:hover:not(:disabled){border-color:var(--tinta)}
+.chip-options button[aria-current=true]{opacity:1;cursor:default;outline:2px solid var(--tinta);outline-offset:-2px}
+.chip-options button[aria-current=true]::after{content:" ✓"}
+.chip-options .form-error:empty{display:none}
+.task-index-tags .chip{min-height:24px;padding:2px 8px;font-size:.68rem}
+
+/* Datos de la tarea en una franja compacta. */
+.task-card .task-meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin:16px 0;padding:10px 0;border-block:1px solid var(--arena)}
+.task-card .task-meta>div{background:none;border:0;padding:0}
+.task-card .task-meta dd{margin:3px 0 0;font-size:.85rem}
+
+/* Acciones en una fila de botones; al abrir una, su formulario ocupa todo el ancho. */
+.task-card .task-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;border:0;margin:18px 0;padding:0}
+.task-card .task-actions details{padding:0}
+.task-card .task-actions summary{list-style:none;display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--tinta);background:var(--claro);padding:7px 14px;font:700 .78rem/1.2 Arial,sans-serif}
+.task-card .task-actions details.primary>summary{background:var(--tinta);color:var(--claro)}
+.task-card .task-actions details[open]{flex-basis:100%}
+.task-card .task-actions details[open]>summary{box-shadow:3px 3px 0 var(--amarillo)}
+.task-card .task-actions form{margin-top:10px;border:1px solid var(--arena)}
+.task-card .task-history summary{font-size:.8rem;font-weight:700;color:var(--gris)}

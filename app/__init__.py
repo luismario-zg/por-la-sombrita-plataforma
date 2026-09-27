@@ -345,8 +345,9 @@ def create_app(config=None):
     def members():
         page=page_number()
         rows=db().execute('SELECT id,name,role,membership,membership_reference FROM users WHERE active=1 ORDER BY name,id LIMIT ? OFFSET ?',(PAGE_SIZE+1,(page-1)*PAGE_SIZE)).fetchall()
+        totals=db().execute("SELECT COUNT(*) AS active,COALESCE(SUM(membership='official'),0) AS official FROM users WHERE active=1").fetchone()
         previous_page,next_page=page_links(page,len(rows)>PAGE_SIZE)
-        return render_template('members.html',title='Comunidad y membresía',members=rows[:PAGE_SIZE],previous_page=previous_page,next_page=next_page)
+        return render_template('members.html',title='Comunidad y membresía',members=rows[:PAGE_SIZE],totals=totals,previous_page=previous_page,next_page=next_page)
 
     @app.get('/cuenta')
     def account():return render_template('account.html',title='Tu cuenta',return_to=safe_return_path(request.args.get('next')))

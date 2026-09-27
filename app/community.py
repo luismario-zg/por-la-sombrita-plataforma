@@ -291,6 +291,7 @@ def work():
         (PAGE_SIZE+1,(page-1)*PAGE_SIZE),
     ).fetchall()
     previous_page,next_page=page_links(page,len(tasks)>PAGE_SIZE)
+    task_total=db().execute("SELECT COUNT(*) FROM community_tasks").fetchone()[0]
     task_data=[{**dict(task),"events":[],"reviews":[],"comments":[]} for task in tasks[:PAGE_SIZE]]
     if task_data:
         by_id={task['id']:task for task in task_data}
@@ -326,7 +327,7 @@ def work():
     return render_template(
         "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people, everyone=everyone, today=datetime.now(MONTERREY).date().isoformat(),
         priorities=PRIORITIES, categories=TASK_CATEGORIES, task_states=TASK_STATES, notifications=notifications,
-        previous_page=previous_page,next_page=next_page,
+        previous_page=previous_page,next_page=next_page,task_total=task_total,
     )
 
 

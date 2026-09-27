@@ -26,7 +26,8 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Organizar tareas con aceptación expresa, plazo, entregables, revisión, historial y notificaciones; reportar trabajo ya realizado con fecha real, autoría y evidencia; documentar actividades; publicar convocatorias con vigencia; y conversar alrededor de la playlist colectiva «Rolitas para el solazo».
 - Proponer mejoras de la plataforma y, con permiso de Desarrollador, publicar y sincronizar su seguimiento con issues de GitHub. Cerrar un issue no equivale a verificar una implementación.
 - Consultar un asistente que responde únicamente con documentos públicos vigentes y copias cacheadas de fuentes públicas concretas. La respuesta conserva citas y fecha de consulta; si no hay evidencia suficiente, debe declararlo.
-- Recorrer `/trabajo`, `/mejoras`, `/discusiones` y `/miembros` en páginas de 30 elementos con `?pagina=N`; los enlaces conservan los filtros de discusiones.
+- Recorrer `/trabajo`, `/mejoras`, `/discusiones` y `/miembros` en páginas de 30 elementos con `?pagina=N`; los enlaces conservan los filtros de discusiones y los encabezados muestran los totales reales.
+- En `/trabajo`, categoría, prioridad y estado comparten un mismo estilo de etiqueta. Para participantes, la etiqueta de categoría y la de prioridad (esta solo en tareas no cerradas) son botones: se pulsan, se elige la opción y se guarda de inmediato con registro en el historial. Las demás acciones (tomar, proponer, entregar, revisar, reportar como hecha, cerrar) forman una fila de botones y solo una queda abierta a la vez.
 - Con permiso de Desarrollador, consultar la planeación técnica, guardar respuestas con historial y mantener visibles preguntas pendientes, trabajo en proceso e implementaciones terminadas.
 - Dictar una respuesta desde el micrófono para obtener un borrador editable; el audio no se conserva y la transcripción nunca se guarda automáticamente.
 

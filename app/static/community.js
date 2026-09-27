@@ -21,3 +21,9 @@ document.querySelectorAll('[data-community-image]').forEach(input=>input.addEven
   hidden.value=result.path;status.textContent=`Imagen lista (${result.width} × ${result.height} px).`;
  }catch(error){status.textContent=error.message;input.value='';}finally{input.disabled=false;}
 }));
+
+// Menús de etiquetas: uno abierto a la vez; se cierran con Escape o al pulsar fuera.
+const chipMenus=[...document.querySelectorAll('.chip-menu')];
+chipMenus.forEach(menu=>menu.addEventListener('toggle',()=>{if(menu.open)chipMenus.forEach(other=>{if(other!==menu)other.open=false;});}));
+document.addEventListener('click',event=>chipMenus.forEach(menu=>{if(menu.open&&!menu.contains(event.target))menu.open=false;}));
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const open=chipMenus.find(menu=>menu.open);if(open){open.open=false;open.querySelector('summary').focus();}});

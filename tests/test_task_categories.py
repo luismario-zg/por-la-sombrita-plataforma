@@ -40,3 +40,26 @@ def test_category_migration_preserves_existing_task_and_is_repeatable(app):
         init_community_schema(db);init_community_schema(db)
         restored=dict(db.execute('SELECT * FROM community_tasks WHERE id=?',(ident,)).fetchone())
         assert restored==original
+
+
+def test_task_tags_are_one_click_menus_only_for_participants(app):
+    c=client(app,'ana');ident=create_open(c,category='research').json['id']
+    page=c.get('/trabajo').data.decode()
+    assert f'data-api="/api/community/tasks/{ident}/priority"' in page and f'data-api="/api/community/tasks/{ident}/category"' in page
+    assert 'name="priority" value="urgent"' in page and 'aria-current="true" disabled' in page
+    assert 'Cambiar prioridad</summary>' not in page and 'Guardar prioridad' not in page
+    anonymous=client(app).get('/trabajo').data.decode()
+    assert 'Investigación' in anonymous and 'chip-menu' not in anonymous
+    with connect(app.config['DATABASE']) as db:
+        db.execute("UPDATE community_tasks SET state='closed' WHERE id=?",(ident,));db.commit()
+    closed=c.get('/trabajo').data.decode()
+    assert f'/api/community/tasks/{ident}/priority' not in closed and f'/api/community/tasks/{ident}/category' in closed
+
+
+def test_listings_show_real_totals_across_pages(app):
+    c=client(app,'ana')
+    for _ in range(3):create_open(c)
+    assert '3 tareas registradas' in client(app).get('/trabajo?pagina=2').data.decode()
+    with connect(app.config['DATABASE']) as db:
+        active,official=db.execute("SELECT COUNT(*),COALESCE(SUM(membership='official'),0) FROM users WHERE active=1").fetchone()
+    assert f'{active} cuentas activas · {official} con membresía oficial registrada.' in client(app).get('/miembros?pagina=9').data.decode()
