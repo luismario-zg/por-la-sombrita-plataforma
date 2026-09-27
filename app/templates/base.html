@@ -41,11 +41,11 @@
       <details class="nav-group"><summary class="nav-entry">Participar</summary><div><a href="/trabajo">Tareas y notificaciones</a><a href="/actividades">Actividades</a><a href="/convocatorias">Convocatorias</a><a href="/rolitas">Rolitas para el solazo</a><a href="/mejoras">Mejoras de la plataforma</a>{% if me and me.moderator_access %}<a href="/moderacion/aportaciones">Moderar aportaciones</a>{% endif %}</div></details>
       <a class="nav-entry" href="/asistente">Pregúntale</a>
       {% if me and me.developer_access %}<a class="nav-entry" href="/planeacion-desarrollo-plataforma">Planeación</a>{% endif %}
-      <a class="nav-participa" href="/cuenta">{{ me.name if me else 'Entrar' }}</a>
+      <a class="nav-participa" href="{{ url_for('account', next=request.full_path.rstrip('?')) if request.path != '/cuenta' else '/cuenta' }}">{{ me.name if me else 'Entrar' }}</a>
     </nav>
   </div></header>
   <div class="prototipo"><div class="contenedor">PROTOTIPO COMUNITARIO <span>Lectura pública · aportaciones invitadas con moderación · decisiones con historial</span></div></div>
-  {% if me and me.must_change %}<div class="aviso contenedor">Tu contraseña es provisional. <a href="/cuenta">Cámbiala para comenzar a participar.</a></div>{% endif %}
+  {% if me and me.must_change %}<div class="aviso contenedor">Tu contraseña es provisional. <a href="{{ url_for('account', next=request.full_path.rstrip('?')) if request.path != '/cuenta' else '/cuenta' }}">Cámbiala para comenzar a participar.</a></div>{% endif %}
   <main id="contenido">{% block content %}{% endblock %}</main>
   <footer class="pie"><div class="contenedor">
     <div class="pie-superior"><a class="marca" href="/"><span class="sol" aria-hidden="true">✳</span><span>POR LA<br>SOMBRITA</span></a><p>Conocimiento ciudadano.<br>Una ciudad más caminable.</p><a href="/participa">Participación y privacidad ↗</a></div>

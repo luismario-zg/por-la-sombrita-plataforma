@@ -7,7 +7,8 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 ## Qué permite
 
 - Leer documentos, versiones, discusiones e historial sin cuenta.
-- Entrar con usuario y contraseña; cambiar la contraseña provisional en el primer acceso.
+- Entrar con usuario y contraseña y regresar a la página de origen, incluidos filtros y sección; si la contraseña es provisional, conservar ese destino después del cambio obligatorio.
+- Comentar una sección como administrador para registrar un pendiente público en Mejoras, con sección, versión y texto de origen preservados; admite dictado para cuentas con membresía validada.
 - Seleccionar una frase o comentar una sección completa; conservar cita, contexto y versión de origen.
 - Reconocer citas en el documento actual mediante resaltado cuando todavía coinciden; conservar siempre la versión original si el texto cambia.
 - Comentar con nombre y fecha; conservar los mensajes sin edición ni borrado en esta primera versión.
@@ -20,6 +21,7 @@ La plataforma es independiente del bot de rutas térmicas. Conserva la identidad
 - Abrir una discusión sobre una carpeta o un archivo completo desde cualquier nivel del árbol. Los documentos nativos que no se pueden descargar muestran su ruta y el acceso convencional a Proton.
 - Enviar aportaciones sin cuenta con un nombre elegido. Entran a una cola privada; una persona con permiso de Moderador las aprueba o descarta con motivo antes de que aparezcan públicamente. Los contactos opcionales permanecen privados.
 - Separar el rol general y la membresía de tres capacidades adicionales: Editor, Moderador y Desarrollador. Las bases y directrices requieren Editor y además administración.
+- Clasificar tareas mediante etiquetas de comunicación, organización comunitaria, acuerdos, vinculación, prototipos, investigación y desarrollo de plataforma; conservar los cambios de categoría en el historial.
 - Organizar tareas con aceptación expresa, plazo, entregables, revisión, historial y notificaciones; reportar trabajo ya realizado con fecha real, autoría y evidencia; documentar actividades; publicar convocatorias con vigencia; y conversar alrededor de la playlist colectiva «Rolitas para el solazo».
 - Proponer mejoras de la plataforma y, con permiso de Desarrollador, publicar y sincronizar su seguimiento con issues de GitHub. Cerrar un issue no equivale a verificar una implementación.
 - Consultar un asistente que responde únicamente con documentos públicos vigentes y copias cacheadas de fuentes públicas concretas. La respuesta conserva citas y fecha de consulta; si no hay evidencia suficiente, debe declararlo.

@@ -246,3 +246,17 @@ La publicación se decide antes de insertar cada elemento. Se rechazan nombres o
 Los archivos descargables se sirven desde una ruta controlada que vuelve a comprobar que sean archivos regulares dentro del espejo. HTML, SVG y formatos no incluidos en la lista segura se descargan como adjuntos; no se ejecutan dentro del origen autenticado. La vista integrada se limita a PDF, imágenes raster, audio, video y texto escapado. Los documentos nativos de Proton no tienen copia local: la ficha muestra su ruta y el enlace público convencional.
 
 Cada elemento tiene una versión indexada. Los archivos cambian de versión cuando cambia su revisión remota; las carpetas, cuando cambia su subárbol público. Las fichas de discusión se marcan desactualizadas si el elemento cambia. Si desaparece, su descarga se bloquea, pero su ficha y las conversaciones permanecen en el historial.
+
+## Categorías de tareas y comentarios de desarrollo
+
+Al arrancar, la migración idempotente añade `community_tasks.category` con valor
+`general` en bases anteriores y crea `improvement_sections` para conservar el
+contexto de los comentarios administrativos. No cambia estados, responsables,
+plazos ni comentarios existentes. Las categorías iniciales de tareas reales se
+asignan por separado, con respaldo y un evento por tarea; no se incluyen datos
+reales en el repositorio. Las personas participantes pueden corregir la etiqueta.
+
+Una reversión de código puede conservar ambas adiciones de esquema y sus datos.
+No eliminar tablas ni columnas para revertir la interfaz: se perdería contexto
+creado después del despliegue. Los comentarios administrativos se consultan en
+`/mejoras`; publicarlos en GitHub sigue requiriendo la confirmación del desarrollador.

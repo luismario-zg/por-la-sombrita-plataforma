@@ -70,8 +70,8 @@
         {% if not transcription_enabled %}<p class="form-note">El dictado todavía no está configurado.</p>{% else %}<p class="form-note">El audio se transcribe, no se conserva y no se guarda hasta que pulses Guardar.</p>{% endif %}
         <p class="form-error" role="alert"></p>
       </form>
-      {% elif not me %}<p class="plan-login"><a href="/cuenta">Entra con tu cuenta para responder esta pregunta.</a></p>
-      {% elif me.must_change %}<p class="plan-login"><a href="/cuenta">Cambia tu contraseña provisional para responder.</a></p>
+      {% elif not me %}<p class="plan-login"><a href="{{ url_for('account', next=request.full_path.rstrip('?')) if request.path != '/cuenta' else '/cuenta' }}">Entra con tu cuenta para responder esta pregunta.</a></p>
+      {% elif me.must_change %}<p class="plan-login"><a href="{{ url_for('account', next=request.full_path.rstrip('?')) if request.path != '/cuenta' else '/cuenta' }}">Cambia tu contraseña provisional para responder.</a></p>
       {% elif not history %}<p class="form-note">Tu cuenta es de solo lectura.</p>{% endif %}
     </article>
     {% endfor %}

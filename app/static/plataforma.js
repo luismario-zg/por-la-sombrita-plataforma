@@ -48,6 +48,8 @@ document.querySelectorAll('form[data-api]').forEach(form=>{
    const response=await fetch(form.dataset.api,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':sess.csrf},body:JSON.stringify(data)});
    const result=await response.json();if(!response.ok)throw new Error(result.error||'No se pudo completar la acción.');
    form.dataset.dirty='false';sessionPromise=null;
+   if(form.dataset.success==='return'){location.assign(result.redirect||'/');return;}
+   if(form.dataset.success==='improvement'){location.assign('/mejoras/'+result.id);return;}
    if(form.dataset.success==='thread'){location.assign('/discusiones/'+result.id);return;}
    if(form.dataset.success==='guest-submission'){form.reset();if(form.closest('dialog'))form.closest('dialog').close();notify(result.message||'Recibimos tu aportación para moderación.');return;}
    if(form.dataset.success==='moderation'){if(result.url)notify('Aportación publicada.');location.reload();return;}
@@ -72,7 +74,7 @@ function openDiscussion(section,selection){
  dialog.showModal();selectionButton.hidden=true;
 }
 document.querySelectorAll('[data-discuss-section]').forEach(button=>button.addEventListener('click',()=>openDiscussion(button.closest('.doc-section'),null)));
-document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>dialog.close()));
+document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
 if(selectionButton){
  document.addEventListener('selectionchange',()=>{
   const selection=window.getSelection();
@@ -111,4 +113,36 @@ if(annotationNode&&window.CSS?.highlights&&window.Highlight){
  }
  CSS.highlights.set('debates',new Highlight(...ranges));
  if(chosen){CSS.highlights.set('debate-elegido',new Highlight(chosen));chosen.startContainer.parentElement.scrollIntoView({block:'center'});}
+}
+
+/* Los borradores de distintas secciones conservan su contexto al volver a abrirlos. */
+const developmentDialog=document.getElementById('section-development');
+const sectionDrafts=new Map();
+document.querySelectorAll('[data-develop-section]').forEach(button=>button.addEventListener('click',()=>{
+ const section=button.closest('.doc-section');const form=developmentDialog.querySelector('form');
+ const previous=form.elements.section.value;
+ if(previous)sectionDrafts.set(previous,{title:form.elements.title.value,body:form.elements.body.value});
+ const draft=sectionDrafts.get(section.dataset.section);
+ form.elements.section.value=section.dataset.section;
+ form.elements.title.value=draft?.title??'';form.elements.body.value=draft?.body??'';
+ form.querySelector('.form-error').textContent='';
+ form.querySelector('[data-development-context]').textContent='Sección: '+section.dataset.title;
+ developmentDialog.showModal();
+}));
+
+/* Conservar también el ancla, que el navegador no envía al servidor. */
+if(location.pathname!=='/cuenta'){
+ document.querySelectorAll('a[href]').forEach(link=>{
+  const target=new URL(link.href,location.href);
+  if(target.origin===location.origin&&target.pathname==='/cuenta'){
+   target.searchParams.set('next',location.pathname+location.search+location.hash);
+   link.href=target.pathname+target.search;
+  }
+ });
+ window.addEventListener('hashchange',()=>{
+  document.querySelectorAll('a[href]').forEach(link=>{
+   const target=new URL(link.href,location.href);
+   if(target.origin===location.origin&&target.pathname==='/cuenta'){target.searchParams.set('next',location.pathname+location.search+location.hash);link.href=target.pathname+target.search;}
+  });
+ });
 }

@@ -1,5 +1,6 @@
 /* Dictado para respuestas: grabar → transcribir → borrador editable. Nunca guarda automáticamente. */
 let activeVoice=null;
+let startingVoice=null;
 let transcribingForm=null;
 const voiceMime=()=>{
   if(!window.MediaRecorder)return '';
@@ -32,10 +33,11 @@ async function transcribe(state,blob){
   finally{transcribingForm=null;form.querySelector('[type=submit]').disabled=false;}
 }
 async function startVoice(form){
-  if(activeVoice||transcribingForm){voiceMessage(form,'Termina la grabación o transcripción actual.');return;}
+  if(activeVoice||transcribingForm||startingVoice){voiceMessage(form,'Termina la grabación o transcripción actual.');return;}
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){voiceMessage(form,'Este navegador no permite grabar audio. Verifica que uses HTTPS.');return;}
   const mimetype=voiceMime();if(!mimetype){voiceMessage(form,'Este navegador no ofrece un formato de audio compatible.');return;}
   let stream;
+  startingVoice=form;
   try{
     if(navigator.permissions?.query){try{const permission=await navigator.permissions.query({name:'microphone'});if(permission.state==='denied'){voiceMessage(form,'Permiso de micrófono denegado. Habilítalo en la configuración del sitio.');return;}}catch{}}
     stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -52,6 +54,7 @@ async function startVoice(form){
     form.querySelector('.voice-cancel').hidden=false;const timer=form.querySelector('.voice-timer');timer.hidden=false;voiceMessage(form,'Grabando…');
     state.interval=setInterval(()=>{const seconds=Math.floor((Date.now()-state.started)/1000);timer.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');if(seconds>=180&&recorder.state==='recording')recorder.stop();},500);
   }catch(error){stopTracks(stream);activeVoice=null;voiceMessage(form,error.name==='NotAllowedError'?'Permiso de micrófono denegado. Habilítalo desde el candado del navegador.':error.name==='NotFoundError'?'No se encontró un micrófono.':'No se pudo iniciar el micrófono: '+error.message);}
+  finally{startingVoice=null;}
 }
 document.querySelectorAll('.plan-response-form,.voice-enabled').forEach(form=>{
   form.querySelector('.voice-button')?.addEventListener('click',()=>{
@@ -62,7 +65,7 @@ document.querySelectorAll('.plan-response-form,.voice-enabled').forEach(form=>{
   });
 });
 document.addEventListener('submit',event=>{
-  if(event.target.matches('.plan-response-form,.voice-enabled')&&(activeVoice||transcribingForm)){event.preventDefault();event.stopImmediatePropagation();voiceMessage(event.target,'Termina la grabación o transcripción antes de guardar.');}
+  if(event.target.matches('.plan-response-form,.voice-enabled')&&(activeVoice||transcribingForm||startingVoice)){event.preventDefault();event.stopImmediatePropagation();voiceMessage(event.target,'Termina la grabación o transcripción antes de guardar.');}
 },true);
 
 const planTabs=[...document.querySelectorAll('.plan-category-tabs [role=tab]')];
@@ -83,3 +86,13 @@ for(const [index,tab] of planTabs.entries()){
 }
 const requested=location.hash.startsWith('#panel-')?document.querySelector(`.plan-category-tabs [aria-controls="${CSS.escape(location.hash.slice(1))}"]`):null;
 if(requested)selectPlanTab(requested);
+
+/* Conservar la sección de destino mientras el micrófono o la transcripción están activos. */
+document.querySelectorAll('dialog:has(.voice-enabled)').forEach(dialog=>{
+ const guard=event=>{
+  const form=activeVoice?.form||transcribingForm||startingVoice;
+  if(form&&dialog.contains(form)){event.preventDefault();event.stopImmediatePropagation();voiceMessage(form,'Termina o descarta el dictado antes de cerrar.');}
+ };
+ dialog.addEventListener('cancel',guard);
+ dialog.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',guard,true));
+});

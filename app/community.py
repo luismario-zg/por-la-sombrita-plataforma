@@ -19,6 +19,16 @@ MONTERREY = ZoneInfo("America/Monterrey")
 PARTICIPANT_ROLES = ("owner", "admin", "reviewer", "member")
 ADMIN_ROLES = ("owner", "admin")
 PRIORITIES = {"low": "Baja", "normal": "Normal", "high": "Alta", "urgent": "Urgente"}
+TASK_CATEGORIES = {
+    "communication": "Comunicación y difusión",
+    "community": "Organización comunitaria",
+    "governance": "Acuerdos y metodología",
+    "partnerships": "Vinculación",
+    "prototypes": "Prototipos e intervenciones",
+    "research": "Investigación",
+    "platform": "Desarrollo de plataforma",
+    "general": "General",
+}
 TASK_STATES = {
     "open": "Abierta",
     "pending_acceptance": "Responsabilidad propuesta",
@@ -38,6 +48,8 @@ def init_community_schema(connection):
             connection.execute("ALTER TABLE community_calls ADD COLUMN creator INTEGER REFERENCES users(id)")
             connection.execute("UPDATE community_calls SET creator=updated_by WHERE creator IS NULL")
         task_columns={row["name"] for row in connection.execute("PRAGMA table_info(community_tasks)")}
+        if "category" not in task_columns:
+            connection.execute("ALTER TABLE community_tasks ADD COLUMN category TEXT NOT NULL DEFAULT 'general'")
         if "completed_on" not in task_columns:
             # Registro de trabajo realizado antes de reportarlo en la plataforma.
             connection.execute("ALTER TABLE community_tasks ADD COLUMN completed_on TEXT")
@@ -293,7 +305,7 @@ def work():
     ).fetchall() if current else []
     return render_template(
         "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people, everyone=everyone, today=datetime.now(MONTERREY).date().isoformat(),
-        priorities=PRIORITIES, task_states=TASK_STATES, notifications=notifications,
+        priorities=PRIORITIES, categories=TASK_CATEGORIES, task_states=TASK_STATES, notifications=notifications,
     )
 
 
@@ -343,6 +355,8 @@ def media(filename):
 def create_task():
     actor = require(*PARTICIPANT_ROLES); payload = _json_body(); limited(f"community-task:{actor['id']}", 40, 3600)
     title=field(payload,"title",160);description=field(payload,"description",6000);reference=_optional_text(payload,"reference",500)
+    category=payload.get("category","general")
+    if not isinstance(category,str) or category not in TASK_CATEGORIES:abort(400,description="Revisa la categoría.")
     priority=payload.get("priority","normal")
     if priority not in PRIORITIES:abort(400,description="Revisa la prioridad.")
     completion=None
@@ -354,8 +368,8 @@ def create_task():
     state="in_progress" if assignee==actor["id"] else ("pending_acceptance" if assignee else "open")
     stamp=now();connection=db();connection.execute("BEGIN IMMEDIATE")
     if assignee and not connection.execute("SELECT 1 FROM users WHERE id=? AND active=1 AND role IN ('owner','admin','reviewer','member')",(assignee,)).fetchone():abort(400,description="La persona responsable no está disponible.")
-    cursor=connection.execute("""INSERT INTO community_tasks(title,description,reference,priority,state,creator,assignee,due_date,created,updated)
-        VALUES(?,?,?,?,?,?,?,?,?,?)""",(title,description,reference,priority,state,actor["id"],assignee,due,stamp,stamp));ident=cursor.lastrowid
+    cursor=connection.execute("""INSERT INTO community_tasks(title,description,reference,priority,state,creator,assignee,due_date,created,updated,category)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(title,description,reference,priority,state,actor["id"],assignee,due,stamp,stamp,category));ident=cursor.lastrowid
     detail="Se creó como tarea abierta."
     if state=="in_progress":detail=f"La persona creadora asumió la responsabilidad con plazo {due}."
     elif state=="pending_acceptance":detail="Se propuso una persona responsable; falta su respuesta y fecha comprometida."
@@ -365,6 +379,17 @@ def create_task():
         _record_completion(connection,ident,actor,completion);connection.commit();return jsonify(id=ident,state="closed"),201
     if state=="pending_acceptance":_notify(connection,assignee,ident,"assignment",f"Te proponen una tarea: {title}","Acepta o rechaza la responsabilidad y, al aceptar, indica tu plazo.",f"assignment:{ident}:{event_id}:{assignee}")
     connection.commit();return jsonify(id=ident,state=state),201
+
+
+@bp.post("/api/community/tasks/<int:ident>/category")
+def categorize_task(ident):
+    actor=require(*PARTICIPANT_ROLES);payload=_json_body();category=payload.get("category")
+    if not isinstance(category,str) or category not in TASK_CATEGORIES:abort(400,description="Revisa la categoría.")
+    connection=db();connection.execute("BEGIN IMMEDIATE");task=_task_from(connection,ident)
+    if task["category"]!=category:
+        connection.execute("UPDATE community_tasks SET category=?,updated=? WHERE id=?",(category,now(),ident))
+        _event(connection,ident,actor["id"],"categorized",f"Categoría: {TASK_CATEGORIES[category]}.")
+    connection.commit();return jsonify(ok=True)
 
 
 @bp.post("/api/community/tasks/<int:ident>/priority")

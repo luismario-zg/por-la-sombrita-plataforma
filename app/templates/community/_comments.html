@@ -23,6 +23,6 @@
         <p class="form-error" role="alert"></p><button class="small-button" type="submit">Enviar a moderación</button>
       </form>
     </details>
-    <p class="form-note"><a href="/cuenta">Entra con tu cuenta</a> si ya tienes acceso.</p>
+    <p class="form-note"><a href="{{ url_for('account', next=request.full_path.rstrip('?')) if request.path != '/cuenta' else '/cuenta' }}">Entra con tu cuenta</a> si ya tienes acceso.</p>
   {% else %}<p class="form-note">Tu cuenta todavía no puede comentar aquí.</p>{% endif %}
 </section>

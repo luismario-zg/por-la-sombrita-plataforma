@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS community_tasks(
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   reference TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'general',
   priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
   state TEXT NOT NULL DEFAULT 'open' CHECK(state IN ('open','pending_acceptance','in_progress','review','closed')),
   creator INTEGER NOT NULL REFERENCES users(id),

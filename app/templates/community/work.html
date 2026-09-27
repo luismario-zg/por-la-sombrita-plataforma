@@ -10,6 +10,7 @@
   <section class="community-panel" id="nueva-tarea"><h2>Crear una tarea</h2>
     <form data-api="/api/community/tasks" class="community-form-grid">
       <label>Título<input name="title" maxlength="160" required></label>
+      <label>Categoría<select name="category">{% for key,label in categories.items() %}<option value="{{ key }}"{% if key == 'general' %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       <label>Prioridad<select name="priority">{% for key,label in priorities.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
       <label class="wide">Descripción<textarea name="description" maxlength="6000" required></textarea></label>
       <label>Referencia opcional<input name="reference" maxlength="500" placeholder="Acta, documento o rolitas"></label>
@@ -28,10 +29,10 @@
   </section>{% endif %}
 
   <section class="community-list"><div class="community-section-title"><h2>Tareas</h2><p>{{ tasks|length }} registradas con historial público.</p></div>
-  {% if tasks|length > 5 %}<nav class="task-index" aria-label="Índice de tareas"><ol>{% for task in tasks %}<li><a href="#tarea-{{ task.id }}">{{ task.title }}</a><span class="community-badge">{{ priorities[task.priority] }}</span><span class="task-index-state">{% if task.completed_on %}Realizada · {{ task.performer_name }} · {{ task.completed_on }}{% else %}{{ task_states[task.state] }} · {{ task.assignee_name or 'Por tomar' }}{% endif %}</span></li>{% endfor %}</ol></nav>{% endif %}
+  {% if tasks|length > 5 %}<nav class="task-index" aria-label="Índice de tareas"><ol>{% for task in tasks %}<li><a href="#tarea-{{ task.id }}">{{ task.title }}</a><span class="task-category" aria-label="Categoría">{{ categories[task.category] }}</span><span class="community-badge">{{ priorities[task.priority] }}</span><span class="task-index-state">{% if task.completed_on %}Realizada · {{ task.performer_name }} · {{ task.completed_on }}{% else %}{{ task_states[task.state] }} · {{ task.assignee_name or 'Por tomar' }}{% endif %}</span></li>{% endfor %}</ol></nav>{% endif %}
   {% for task in tasks %}
     <article class="task-card priority-{{ task.priority }}" id="tarea-{{ task.id }}">
-      <header><div><span class="community-badge">{{ priorities[task.priority] }}</span><span class="community-badge state-{{ task.state }}">{{ task_states[task.state] }}</span></div><h3>{{ task.title }}</h3></header>
+      <header><div><span class="task-category" aria-label="Categoría">{{ categories[task.category] }}</span><span class="community-badge">{{ priorities[task.priority] }}</span><span class="community-badge state-{{ task.state }}">{{ task_states[task.state] }}</span></div><h3>{{ task.title }}</h3></header>
       <p class="preserve">{{ task.description }}</p>
       {% if task.reference %}<p class="community-reference"><strong>Referencia:</strong> {{ task.reference }}</p>{% endif %}
       <dl class="task-meta"><div><dt>Creó</dt><dd>{{ task.creator_name }}</dd></div><div><dt>Responsable</dt><dd>{{ task.performer_name if task.completed_on else (task.assignee_name or 'Por tomar') }}</dd></div><div><dt>Plazo</dt><dd>{{ ('Realizada el ' ~ task.completed_on) if task.completed_on else (task.due_date or 'Sin compromiso todavía') }}</dd></div></dl>
@@ -40,6 +41,7 @@
       {% if task.deliverable %}<section class="deliverable"><h4>Entregable · versión {{ task.deliverable_version }}</h4><p class="preserve">{{ task.deliverable }}</p>
         {% if task.reviews %}<ul>{% for review in task.reviews %}<li><strong>{{ review.reviewer_name }}</strong> · {{ 'Aprobó' if review.decision == 'approve' else 'Pidió cambios' }} la versión {{ review.deliverable_version }}<p>{{ review.comment }}</p></li>{% endfor %}</ul>{% endif %}</section>{% endif %}
 
+      {% if me and not me.must_change and me.role in ['owner','admin','reviewer','member'] %}<details class="task-category-edit"><summary>Cambiar categoría</summary><form data-api="/api/community/tasks/{{ task.id }}/category"><label>Categoría<select name="category">{% for key,label in categories.items() %}<option value="{{ key }}"{% if key == task.category %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><p class="form-error" role="alert"></p><button class="small-button">Guardar categoría</button></form></details>{% endif %}
       {% if me and me.role in ['owner','admin','reviewer','member'] and task.state != 'closed' %}
       <div class="task-actions">
         <details><summary>Cambiar prioridad</summary><form data-api="/api/community/tasks/{{ task.id }}/priority"><label>Prioridad<select name="priority">{% for key,label in priorities.items() %}<option value="{{ key }}"{% if key == task.priority %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><p class="form-error" role="alert"></p><button class="small-button">Guardar prioridad</button></form></details>

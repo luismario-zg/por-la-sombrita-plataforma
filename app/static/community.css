@@ -11,3 +11,7 @@
 .task-done-create{margin-top:6px}
 .task-done-create .community-form-grid{margin-top:12px}
 .task-done-note{margin:-6px 0 14px;padding:0 16px 12px 22px;font-size:.9rem}
+
+/* Etiqueta temática, independiente de la prioridad y del estado. */
+.task-category{display:inline-block;border:1px solid var(--arena);border-radius:12px;padding:2px 9px;margin:2px 6px 2px 0;font:600 .7rem/1.5 Arial,sans-serif;color:var(--oliva);background:var(--claro)}
+.task-category-edit{margin-block:12px;font-size:.8rem}

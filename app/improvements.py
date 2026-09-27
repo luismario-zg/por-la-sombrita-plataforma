@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from flask import Blueprint,abort,current_app,jsonify,render_template,request
-from .core import connect,db,field,limited,now,require,user
+from .core import connect,db,field,limited,now,require,user,sections,number
 
 improvements=Blueprint('improvements',__name__)
 REPO='luismario-zg/por-la-sombrita-plataforma'
@@ -14,6 +14,7 @@ SCHEMA_SQL='''
 CREATE TABLE IF NOT EXISTS improvements(id INTEGER PRIMARY KEY,title TEXT NOT NULL,body TEXT NOT NULL,author INTEGER NOT NULL REFERENCES users(id),status TEXT NOT NULL DEFAULT 'proposed',version INTEGER NOT NULL DEFAULT 1,issue_number INTEGER UNIQUE,github_state TEXT NOT NULL DEFAULT '',sync_state TEXT NOT NULL DEFAULT 'idle',sync_error TEXT NOT NULL DEFAULT '',synced TEXT,created TEXT NOT NULL,updated TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS improvement_events(id INTEGER PRIMARY KEY,improvement INTEGER NOT NULL REFERENCES improvements(id),actor INTEGER REFERENCES users(id),body TEXT NOT NULL,source TEXT NOT NULL DEFAULT 'platform',external_id TEXT UNIQUE,created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS improvement_outbox(event INTEGER PRIMARY KEY REFERENCES improvement_events(id) ON DELETE CASCADE,created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS improvement_sections(improvement INTEGER PRIMARY KEY REFERENCES improvements(id),document TEXT NOT NULL REFERENCES documents(slug),version INTEGER NOT NULL,section TEXT NOT NULL,section_title TEXT NOT NULL,section_text TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_improvements_sync ON improvements(sync_state,id);
 '''
 
@@ -30,7 +31,7 @@ def body():
 
 @improvements.get('/mejoras')
 def page():
-    rows=db().execute('SELECT i.*,u.name AS author_name FROM improvements i JOIN users u ON u.id=i.author ORDER BY i.id DESC').fetchall()
+    rows=db().execute('SELECT i.*,u.name AS author_name,s.section_title FROM improvements i JOIN users u ON u.id=i.author LEFT JOIN improvement_sections s ON s.improvement=i.id ORDER BY i.id DESC').fetchall()
     return render_template('improvements.html',title='Mejoras de la plataforma',items=rows,statuses=STATUSES)
 
 @improvements.get('/mejoras/<int:ident>')
@@ -42,7 +43,8 @@ def detail(ident):
         FROM improvement_events e LEFT JOIN users u ON u.id=e.actor
         LEFT JOIN guest_attributions ga ON ga.target_type='improvement_event' AND ga.target_id=e.id
         WHERE improvement=? ORDER BY e.id''',(ident,)).fetchall()
-    return render_template('improvement.html',title=row['title'],item=row,events=events,statuses=STATUSES,repo=REPO)
+    source=db().execute('SELECT * FROM improvement_sections WHERE improvement=?',(ident,)).fetchone()
+    return render_template('improvement.html',title=row['title'],item=row,events=events,statuses=STATUSES,repo=REPO,source=source)
 
 @improvements.post('/api/improvements')
 def create():
@@ -51,6 +53,26 @@ def create():
     with db() as c:
         ident=c.execute('INSERT INTO improvements(title,body,author,created,updated) VALUES(?,?,?,?,?)',(title,description,u['id'],stamp,stamp)).lastrowid
         c.execute('INSERT INTO improvement_events(improvement,actor,body,created) VALUES(?,?,?,?)',(ident,u['id'],'Se registró la propuesta en la plataforma.',stamp))
+    return jsonify(id=ident,url=f'/mejoras/{ident}'),201
+
+@improvements.post('/api/improvements/section')
+def create_section():
+    """Registrar un pendiente administrativo conservando su contexto original."""
+    u=require('owner','admin');data=body()
+    title=field(data,'title',160);description=field(data,'body',10000)
+    slug=field(data,'document',150);section=field(data,'section',150);version=number(data,'version')
+    limited('improvement:'+str(u['id']),20,3600)
+    with db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        doc=c.execute('SELECT * FROM documents WHERE slug=? AND hidden=0',(slug,)).fetchone()
+        if not doc:abort(404)
+        if doc['version']!=version:abort(409,description='El documento cambió. Conserva tu borrador y recarga antes de comentar.')
+        sec=next((item for item in sections(doc['html']) if item['id']==section),None)
+        if not sec:abort(400,description='La sección no existe.')
+        stamp=now()
+        ident=c.execute('INSERT INTO improvements(title,body,author,created,updated) VALUES(?,?,?,?,?)',(title,description,u['id'],stamp,stamp)).lastrowid
+        c.execute('INSERT INTO improvement_sections VALUES(?,?,?,?,?,?)',(ident,slug,version,section,sec['title'],sec['text']))
+        c.execute('INSERT INTO improvement_events(improvement,actor,body,created) VALUES(?,?,?,?)',(ident,u['id'],'Comentario de administrador registrado como pendiente de desarrollo.',stamp))
     return jsonify(id=ident,url=f'/mejoras/{ident}'),201
 
 @improvements.post('/api/improvements/<int:ident>')

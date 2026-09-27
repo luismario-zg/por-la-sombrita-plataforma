@@ -1,6 +1,7 @@
 """Plataforma pública de documentación y deliberación de Por la Sombrita."""
 import hashlib, hmac, json, os, secrets, time
 from pathlib import Path
+from urllib.parse import urlsplit, unquote, urlencode
 from flask import Flask, render_template, request, jsonify, g, abort, redirect, make_response, send_from_directory, send_file
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -11,6 +12,20 @@ from .improvements import improvements as improvements_bp, SCHEMA_SQL as IMPROVE
 from .participation import register_participation,register_guest_target,editor_allowed,moderator_allowed,PROTECTED_DOCUMENTS
 from .community import bp as community,init_community_schema,validate_guest_target,publish_guest_comment
 from .editor_markdown import MarkdownError,html_to_markdown,markdown_to_html
+
+def safe_return_path(value):
+    """Solo aceptar destinos internos de navegación, sin redirecciones externas."""
+    if not isinstance(value,str) or len(value)>4096:return '/'
+    decoded=value
+    for _ in range(4):
+        if not decoded.startswith('/') or decoded.startswith('//') or '\\' in decoded or any(ord(ch)<32 or ord(ch)==127 for ch in decoded):return '/'
+        parsed=urlsplit(decoded)
+        if parsed.scheme or parsed.netloc:return '/'
+        if parsed.path in ['/cuenta','/cuenta/'] or parsed.path.startswith(('/api/','/static/')):return '/'
+        new=unquote(decoded)
+        if new==decoded:return value
+        decoded=new
+    return '/'
 
 def create_app(config=None):
     app=Flask(__name__)
@@ -80,7 +95,7 @@ def create_app(config=None):
             response.headers['X-Robots-Tag']='noindex, nofollow'
         else:
             response.headers['Content-Security-Policy']=f"default-src 'self'; script-src 'self' 'nonce-{g.nonce}'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
-        if request.endpoint in ['development_plan','assistant.page']:response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
+        if request.endpoint in ['development_plan','assistant.page','document']:response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=(self)'
         if request.endpoint in ['development_plan','development_report']:response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         if request.path.startswith('/moderacion/'):response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         if request.path.startswith('/api/') or request.path in ['/cuenta','/administracion']:response.headers['X-Robots-Tag']='noindex, nofollow'
@@ -327,7 +342,7 @@ def create_app(config=None):
         return render_template('members.html',title='Comunidad y membresía',members=rows)
 
     @app.get('/cuenta')
-    def account():return render_template('account.html',title='Tu cuenta')
+    def account():return render_template('account.html',title='Tu cuenta',return_to=safe_return_path(request.args.get('next')))
 
     @app.get('/administracion')
     def admin():
@@ -358,7 +373,9 @@ def create_app(config=None):
         ok=check_password_hash(u['password_hash'] if u else app.config['DUMMY_HASH'],password)
         if not ok or not u or not u['active']:abort(401,description='Usuario o contraseña incorrectos.')
         token,csrf=new_session(u['id'])
-        return set_cookie(jsonify(ok=True,must_change=bool(u['must_change']),csrf=csrf),token)
+        destination=safe_return_path(data.get('next'))
+        if u['must_change']:destination='/cuenta?'+urlencode({'next':destination})
+        return set_cookie(jsonify(ok=True,must_change=bool(u['must_change']),csrf=csrf,redirect=destination),token)
 
     @app.post('/api/logout')
     def logout():
@@ -372,7 +389,7 @@ def create_app(config=None):
         if not check_password_hash(u['password_hash'],old):abort(400,description='La contraseña actual no coincide.')
         if len(new)<12 or old==new:abort(400,description='Usa una contraseña diferente de al menos 12 caracteres.')
         c=db();c.execute('UPDATE users SET password_hash=?,must_change=0 WHERE id=?',(generate_password_hash(new),u['id']));c.execute('DELETE FROM sessions WHERE user_id=?',(u['id'],));c.commit()
-        token,csrf=new_session(u['id']);return set_cookie(jsonify(ok=True,csrf=csrf),token)
+        token,csrf=new_session(u['id']);return set_cookie(jsonify(ok=True,csrf=csrf,redirect=safe_return_path(data.get('next'))),token)
 
     @app.post('/api/development/items/<key>/responses')
     def save_development_response(key):
