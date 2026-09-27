@@ -7,11 +7,13 @@ import sqlite3
 import zlib
 from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, send_from_directory
 
 from .core import PAGE_SIZE, db, field, limited, now, page_links, page_number, require, user
+from .participation import _contacts, moderator_allowed, require_moderator
 
 
 bp = Blueprint("community", __name__)
@@ -29,6 +31,9 @@ TASK_CATEGORIES = {
     "platform": "Desarrollo de plataforma",
     "general": "General",
 }
+# Filtro "toma" de /trabajo: estados que cuentan como tomada, por tomar o cerrada.
+TAKE_FILTERS = {"por-tomar": "Por tomar", "tomadas": "Tomadas", "cerradas": "Cerradas"}
+TAKE_STATES = {"por-tomar": ("open",), "tomadas": ("pending_acceptance", "in_progress", "review"), "cerradas": ("closed",)}
 TASK_STATES = {
     "open": "Abierta",
     "pending_acceptance": "Responsabilidad propuesta",
@@ -280,18 +285,37 @@ def work():
     if current:
         sync_task_notifications(db())
     page = page_number()
+    filters={"categoria":request.args.get("categoria",""),"prioridad":request.args.get("prioridad",""),"toma":request.args.get("toma","")}
+    if filters["categoria"] not in TASK_CATEGORIES:filters["categoria"]=""
+    if filters["prioridad"] not in PRIORITIES:filters["prioridad"]=""
+    if filters["toma"] not in TAKE_FILTERS:filters["toma"]=""
+    conditions=[];params=[]
+    if filters["categoria"]:conditions.append("t.category=?");params.append(filters["categoria"])
+    if filters["prioridad"]:conditions.append("t.priority=?");params.append(filters["prioridad"])
+    if filters["toma"]:
+        states=TAKE_STATES[filters["toma"]];conditions.append(f"t.state IN ({','.join('?' for _ in states)})");params.extend(states)
+    where=(" WHERE "+" AND ".join(conditions)) if conditions else ""
+
+    def filter_url(key,value):
+        args={name:chosen for name,chosen in filters.items() if chosen and name!=key}
+        if value:args[key]=value
+        return "/trabajo"+("?"+urlencode(args) if args else "")
+
     tasks = db().execute(
         """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name,
-        COALESCE(performer.name,NULLIF(t.completed_by_name,'')) AS performer_name,closer.name AS closer_name
+        COALESCE(performer.name,NULLIF(t.completed_by_name,'')) AS performer_name,closer.name AS closer_name,proposal.display_name AS proposer_name
         FROM community_tasks t JOIN users creator ON creator.id=t.creator
         LEFT JOIN users assignee ON assignee.id=t.assignee
         LEFT JOIN users performer ON performer.id=t.completed_by
         LEFT JOIN users closer ON closer.id=t.closed_by
+        LEFT JOIN community_task_proposals proposal ON proposal.task_id=t.id"""+where+"""
         ORDER BY t.state='closed',CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated DESC,t.id DESC LIMIT ? OFFSET ?""",
-        (PAGE_SIZE+1,(page-1)*PAGE_SIZE),
+        (*params,PAGE_SIZE+1,(page-1)*PAGE_SIZE),
     ).fetchall()
     previous_page,next_page=page_links(page,len(tasks)>PAGE_SIZE)
     task_total=db().execute("SELECT COUNT(*) FROM community_tasks").fetchone()[0]
+    filtered_total=db().execute("SELECT COUNT(*) FROM community_tasks t"+where,params).fetchone()[0] if conditions else task_total
+    pending_proposals=db().execute("SELECT COUNT(*) FROM community_task_proposals WHERE status='pending'").fetchone()[0] if moderator_allowed(current) else 0
     task_data=[{**dict(task),"events":[],"reviews":[],"comments":[]} for task in tasks[:PAGE_SIZE]]
     if task_data:
         by_id={task['id']:task for task in task_data}
@@ -327,7 +351,8 @@ def work():
     return render_template(
         "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people, everyone=everyone, today=datetime.now(MONTERREY).date().isoformat(),
         priorities=PRIORITIES, categories=TASK_CATEGORIES, task_states=TASK_STATES, notifications=notifications,
-        previous_page=previous_page,next_page=next_page,task_total=task_total,
+        previous_page=previous_page,next_page=next_page,task_total=task_total,filtered_total=filtered_total,
+        filters=filters,filter_url=filter_url,take_filters=TAKE_FILTERS,pending_proposals=pending_proposals,
     )
 
 
@@ -401,6 +426,47 @@ def create_task():
         _record_completion(connection,ident,actor,completion);connection.commit();return jsonify(id=ident,state="closed"),201
     if state=="pending_acceptance":_notify(connection,assignee,ident,"assignment",f"Te proponen una tarea: {title}","Acepta o rechaza la responsabilidad y, al aceptar, indica tu plazo.",f"assignment:{ident}:{event_id}:{assignee}")
     connection.commit();return jsonify(id=ident,state=state),201
+
+
+@bp.post("/api/community/task-proposals")
+def propose_task_as_guest():
+    """Una persona sin cuenta propone una tarea; no se publica hasta que la modere alguien."""
+    if user():abort(409,description="Tu sesión ya está identificada. Usa el formulario «Crear una tarea».")
+    payload=_json_body()
+    title=field(payload,"title",160);description=field(payload,"description",6000);display_name=field(payload,"display_name",120)
+    category=payload.get("category") or "general"
+    if not isinstance(category,str) or category not in TASK_CATEGORIES:abort(400,description="Revisa la categoría.")
+    contacts=_contacts(payload)
+    address=request.headers.get("CF-Connecting-IP",request.remote_addr or "")
+    limited("guest-task:"+hashlib.sha256(address.encode()).hexdigest(),5,3600)
+    connection=db();connection.execute("BEGIN IMMEDIATE")
+    cursor=connection.execute("""INSERT INTO community_task_proposals(title,description,category,display_name,contact_name,contact_organization,contact_phone,contact_email,created)
+        VALUES(?,?,?,?,?,?,?,?,?)""",(title,description,category,display_name,contacts["contact_name"],contacts["contact_organization"],contacts["contact_phone"],contacts["contact_email"],now()))
+    connection.commit()
+    return jsonify(id=cursor.lastrowid,message="Recibimos tu propuesta de tarea. Una persona moderadora la revisará antes de publicarla."),202
+
+
+@bp.post("/api/community/task-proposals/<int:ident>/moderate")
+def moderate_task_proposal(ident):
+    moderator=require_moderator();payload=_json_body()
+    action=field(payload,"action",20);reason=_optional_text(payload,"reason",2000)
+    if action not in {"approve","reject"}:abort(400,description="Acción de moderación inválida.")
+    if action=="reject" and not reason:abort(400,description="Explica por qué se descarta la propuesta.")
+    connection=db();connection.execute("BEGIN IMMEDIATE")
+    proposal=connection.execute("SELECT * FROM community_task_proposals WHERE id=? AND status='pending'",(ident,)).fetchone()
+    if not proposal:abort(409,description="La propuesta ya fue atendida o no existe.")
+    stamp=now()
+    if action=="reject":
+        connection.execute("UPDATE community_task_proposals SET status='rejected',reviewed=?,moderator=?,moderation_reason=? WHERE id=?",(stamp,moderator["id"],reason,ident))
+        connection.commit();return jsonify(ok=True,url=None)
+    category=proposal["category"] if proposal["category"] in TASK_CATEGORIES else "general"
+    cursor=connection.execute("""INSERT INTO community_tasks(title,description,priority,state,creator,created,updated,category)
+        VALUES(?,?,'normal','open',?,?,?,?)""",(proposal["title"],proposal["description"],moderator["id"],stamp,stamp,category))
+    task_id=cursor.lastrowid
+    _event(connection,task_id,moderator["id"],"created",f"Propuesta por {proposal['display_name']} (persona sin cuenta); se aprobó y publicó como tarea abierta.")
+    connection.execute("UPDATE community_task_proposals SET status='approved',reviewed=?,moderator=?,moderation_reason=?,task_id=? WHERE id=?",(stamp,moderator["id"],reason,task_id,ident))
+    connection.commit()
+    return jsonify(ok=True,url=f"/trabajo?tarea={task_id}#tarea-{task_id}")
 
 
 @bp.post("/api/community/tasks/<int:ident>/category")

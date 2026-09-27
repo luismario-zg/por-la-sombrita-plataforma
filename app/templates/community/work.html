@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block head_extra %}<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">{% endblock %}
 {% macro chip(kind,key_label,value,label,options=None,api=None) %}{% if options %}<details class="chip-menu"><summary class="chip chip-{{ kind }} {{ kind }}-{{ value }}" aria-label="{{ key_label }}: {{ label }}. Pulsa para cambiarla"><span class="chip-key">{{ key_label }}</span>{{ label }}<span class="chip-caret" aria-hidden="true">▾</span></summary><form data-api="{{ api }}" class="chip-options"><p class="chip-options-title">Cambiar {{ key_label|lower }}</p>{% for key,option in options.items() %}<button type="submit" name="{{ kind }}" value="{{ key }}" class="{{ kind }}-{{ key }}"{% if key == value %} aria-current="true" disabled{% endif %}>{{ option }}</button>{% endfor %}<p class="form-error" role="alert"></p></form></details>{% else %}<span class="chip chip-{{ kind }} {{ kind }}-{{ value }}"><span class="chip-key">{{ key_label }}</span>{{ label }}</span>{% endif %}{% endmacro %}
+{% macro filter_menu(key,label,options,current) %}<details class="chip-menu filter-menu"><summary class="chip{% if current %} is-active{% endif %}" aria-label="Filtrar por {{ label|lower }}: {{ options[current] if current else 'todas' }}"><span class="chip-key">{{ label }}</span>{{ options[current] if current else 'Todas' }}<span class="chip-caret" aria-hidden="true">▾</span></summary><div class="chip-options"><p class="chip-options-title">Filtrar por {{ label|lower }}</p><a href="{{ filter_url(key,'') }}"{% if not current %} aria-current="true"{% endif %}>Todas</a>{% for value,option in options.items() %}<a href="{{ filter_url(key,value) }}" class="priority-{{ value }}"{% if value == current %} aria-current="true"{% endif %}>{{ option }}</a>{% endfor %}</div></details>{% endmacro %}
 {% block content %}
 <div class="contenedor community-page">
   {% include 'community/_nav.html' %}
@@ -29,7 +30,20 @@
     {% else %}<p class="community-empty">No tienes avisos pendientes.</p>{% endif %}
   </section>{% endif %}
 
-  <section class="community-list"><div class="community-section-title"><h2>Tareas</h2><p>{{ task_total }} {{ "tarea registrada" if task_total == 1 else "tareas registradas" }} con historial público.</p></div>
+  <section class="community-list" id="tareas"><div class="community-section-title task-list-head"><div><h2>Tareas</h2><p>{% if filters.categoria or filters.prioridad or filters.toma %}{{ filtered_total }} de {{ task_total }} tareas con estos filtros.{% else %}{{ task_total }} {{ "tarea registrada" if task_total == 1 else "tareas registradas" }} con historial público.{% endif %}</p></div>
+    <div class="task-filters" role="group" aria-label="Filtrar tareas">{{ filter_menu("categoria","Categoría",categories,filters.categoria) }}{{ filter_menu("prioridad","Prioridad",priorities,filters.prioridad) }}{{ filter_menu("toma","Toma",take_filters,filters.toma) }}{% if filters.categoria or filters.prioridad or filters.toma %}<a class="filter-clear" href="/trabajo#tareas">Quitar filtros</a>{% endif %}</div></div>
+  {% if pending_proposals %}<p class="task-proposals-notice"><strong>{{ pending_proposals }} {{ "tarea propuesta" if pending_proposals == 1 else "tareas propuestas" }} sin cuenta por revisar.</strong> <a href="/moderacion/aportaciones#tareas-propuestas">Revisar →</a></p>{% endif %}
+  {% if not me %}<details class="task-guest-proposal"><summary>+ Proponer una tarea sin cuenta</summary>
+    <form data-api="/api/community/task-proposals" data-success="guest-submission" class="community-form-grid">
+      <label class="wide">Qué hace falta hacer<input name="title" maxlength="160" required placeholder="Por ejemplo: medir la sombra en la plaza de mi colonia"></label>
+      <label class="wide">Detalles<textarea name="description" maxlength="6000" required placeholder="Por qué importa, dónde y cualquier dato útil"></textarea></label>
+      <label>Categoría sugerida<select name="category">{% for key,label in categories.items() %}<option value="{{ key }}"{% if key == 'general' %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <div class="wide">{% include 'participation/_guest_fields.html' %}</div>
+      <p class="form-note wide">Una persona moderadora la revisará antes de publicarla. Se mostrará tu nombre elegido; tus datos de contacto no se publican.</p>
+      <p class="form-error wide" role="alert"></p><button class="small-button" type="submit">Enviar propuesta</button>
+    </form></details>
+  <p class="form-note"><a href="{{ url_for('account', next='/trabajo') }}">Entra con tu cuenta</a> para crear tareas directamente.</p>
+  {% elif me.role in ['owner','admin','reviewer','member'] %}<p class="form-note"><a href="#nueva-tarea">+ Crear una tarea</a></p>{% endif %}
   {% if tasks|length > 5 %}<nav class="task-index" aria-label="Índice de tareas"><ol>{% for task in tasks %}<li><a href="#tarea-{{ task.id }}">{{ task.title }}</a><span class="task-index-tags">{{ chip("priority","Prioridad",task.priority,priorities[task.priority]) }}</span><span class="task-index-state">{% if task.completed_on %}Realizada · {{ task.performer_name }} · {{ task.completed_on }}{% else %}{{ task_states[task.state] }} · {{ task.assignee_name or 'Por tomar' }}{% endif %}</span></li>{% endfor %}</ol></nav>{% endif %}
   {% for task in tasks %}
     <article class="task-card priority-{{ task.priority }}" id="tarea-{{ task.id }}">
@@ -37,7 +51,7 @@
       <header><div class="task-tags">{{ chip("category","Categoría",task.category,categories[task.category],categories if participant else None,"/api/community/tasks/%d/category"|format(task.id)) }}{{ chip("priority","Prioridad",task.priority,priorities[task.priority],priorities if participant and task.state != 'closed' else None,"/api/community/tasks/%d/priority"|format(task.id)) }}{{ chip("state","Estado",task.state,task_states[task.state]) }}</div><h3>{{ task.title }}</h3></header>
       <p class="preserve">{{ task.description }}</p>
       {% if task.reference %}<p class="community-reference"><strong>Referencia:</strong> {{ task.reference }}</p>{% endif %}
-      <dl class="task-meta"><div><dt>Creó</dt><dd>{{ task.creator_name }}</dd></div><div><dt>Responsable</dt><dd>{{ task.performer_name if task.completed_on else (task.assignee_name or 'Por tomar') }}</dd></div><div><dt>Plazo</dt><dd>{{ ('Realizada el ' ~ task.completed_on) if task.completed_on else (task.due_date or 'Sin compromiso todavía') }}</dd></div></dl>
+      <dl class="task-meta"><div><dt>{{ "Propuso" if task.proposer_name else "Creó" }}</dt><dd>{% if task.proposer_name %}{{ task.proposer_name }} <span class="guest-label">Sin cuenta</span>{% else %}{{ task.creator_name }}{% endif %}</dd></div><div><dt>Responsable</dt><dd>{{ task.performer_name if task.completed_on else (task.assignee_name or 'Por tomar') }}</dd></div><div><dt>Plazo</dt><dd>{{ ('Realizada el ' ~ task.completed_on) if task.completed_on else (task.due_date or 'Sin compromiso todavía') }}</dd></div></dl>
 
       {% if task.completed_on %}<p class="task-done"><strong>Realizada por {{ task.performer_name }} el {{ task.completed_on }}.</strong> Reportó {{ task.closer_name }}.</p>{% if task.close_note %}<p class="preserve task-done-note">{{ task.close_note }}</p>{% endif %}{% endif %}
       {% if task.deliverable %}<section class="deliverable"><h4>Entregable · versión {{ task.deliverable_version }}</h4><p class="preserve">{{ task.deliverable }}</p>
@@ -60,7 +74,7 @@
       <details class="task-history"><summary>Historial ({{ task.events|length }})</summary><ol>{% for event in task.events %}<li><time>{{ event.created }}</time> · {{ event.actor_name or 'Sistema' }}<p>{{ event.detail }}</p></li>{% endfor %}</ol></details>
       {% with comments=task.comments,target_type='task',target_id=task.id %}{% include 'community/_comments.html' %}{% endwith %}
     </article>
-  {% else %}<p class="community-empty">Todavía no hay tareas. Una persona con cuenta puede abrir la primera.</p>{% endfor %}
+  {% else %}<p class="community-empty">{% if filters.categoria or filters.prioridad or filters.toma %}Ninguna tarea coincide con estos filtros. <a href="/trabajo#tareas">Quitar filtros</a>{% else %}Todavía no hay tareas. Una persona con cuenta puede abrir la primera, o cualquiera puede proponerla.{% endif %}</p>{% endfor %}
   {% include '_pagination.html' %}
   </section>
 </div>

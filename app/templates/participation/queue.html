@@ -33,5 +33,36 @@
     </div>
   </article>
   {% else %}<p class="empty">No hay aportaciones pendientes de moderación.</p>{% endfor %}
+  <h2 id="tareas-propuestas">Tareas propuestas sin cuenta</h2>
+  <p>Al aprobarla se publica en <a href="/trabajo">Trabajo</a> como tarea abierta con prioridad normal, con la atribución «Propuesta por» y el nombre elegido. Después puedes ajustar su categoría o prioridad desde la propia tarea.</p>
+  {% for item in task_proposals %}
+  <article class="moderation-card">
+    <div class="fila"><span class="badge">Tarea propuesta #{{ item.id }}</span><strong>{{ item.display_name }}</strong><time datetime="{{ item.created }}">{{ item.created|hora }}</time></div>
+    <h2>{{ item.title }}</h2>
+    <p class="metadata">Categoría sugerida: {{ categories.get(item.category, 'General') }}</p>
+    <p class="guest-body">{{ item.description }}</p>
+    {% if item.contact_name or item.contact_organization or item.contact_phone or item.contact_email %}
+    <details class="private-contact"><summary>Datos privados de contacto</summary>
+      <dl>
+        {% if item.contact_name %}<div><dt>Nombre</dt><dd>{{ item.contact_name }}</dd></div>{% endif %}
+        {% if item.contact_organization %}<div><dt>Organización</dt><dd>{{ item.contact_organization }}</dd></div>{% endif %}
+        {% if item.contact_phone %}<div><dt>Teléfono</dt><dd>{{ item.contact_phone }}</dd></div>{% endif %}
+        {% if item.contact_email %}<div><dt>Correo</dt><dd>{{ item.contact_email }}</dd></div>{% endif %}
+      </dl>
+    </details>{% endif %}
+    <div class="moderation-actions">
+      <form data-api="/api/community/task-proposals/{{ item.id }}/moderate" data-success="moderation">
+        <input type="hidden" name="action" value="approve">
+        <label>Nota interna opcional<textarea name="reason" rows="2" maxlength="2000"></textarea></label>
+        <p class="form-error" role="alert"></p><button class="boton" type="submit">Aprobar y publicar tarea</button>
+      </form>
+      <form data-api="/api/community/task-proposals/{{ item.id }}/moderate" data-success="moderation">
+        <input type="hidden" name="action" value="reject">
+        <label>Motivo obligatorio del descarte<textarea name="reason" rows="2" maxlength="2000" required></textarea></label>
+        <p class="form-error" role="alert"></p><button class="small-button" type="submit">Descartar</button>
+      </form>
+    </div>
+  </article>
+  {% else %}<p class="empty">No hay tareas propuestas pendientes.</p>{% endfor %}
 </div>
 {% endblock %}

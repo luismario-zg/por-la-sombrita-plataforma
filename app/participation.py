@@ -183,7 +183,12 @@ def create_submission():
 def moderation_queue():
     require_moderator()
     rows=db().execute("SELECT * FROM guest_submissions WHERE status='pending' ORDER BY id").fetchall()
-    return render_template('participation/queue.html',title='Moderación de aportaciones',submissions=rows)
+    # Las tareas propuestas sin cuenta viven en el módulo comunitario; se moderan aquí mismo.
+    task_proposals=[];categories={}
+    if db().execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='community_task_proposals'").fetchone():
+        from .community import TASK_CATEGORIES as categories
+        task_proposals=db().execute("SELECT * FROM community_task_proposals WHERE status='pending' ORDER BY id").fetchall()
+    return render_template('participation/queue.html',title='Moderación de aportaciones',submissions=rows,task_proposals=task_proposals,categories=categories)
 
 
 def _attribution(connection,submission,target_type,target_id,stamp):

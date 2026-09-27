@@ -105,3 +105,24 @@ CREATE INDEX IF NOT EXISTS idx_community_notifications ON community_notification
 CREATE INDEX IF NOT EXISTS idx_community_activities ON community_activities(starts_at,id);
 CREATE INDEX IF NOT EXISTS idx_community_calls ON community_calls(publish_at,id);
 CREATE INDEX IF NOT EXISTS idx_community_comments ON community_comments(target_type,target_id,id);
+
+-- Tareas propuestas por personas sin cuenta. Se publican solo tras moderación;
+-- los datos de contacto son privados y nunca se muestran en /trabajo.
+CREATE TABLE IF NOT EXISTS community_task_proposals(
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
+  display_name TEXT NOT NULL,
+  contact_name TEXT NOT NULL DEFAULT '',
+  contact_organization TEXT NOT NULL DEFAULT '',
+  contact_phone TEXT NOT NULL DEFAULT '',
+  contact_email TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  created TEXT NOT NULL,
+  reviewed TEXT,
+  moderator INTEGER REFERENCES users(id),
+  moderation_reason TEXT NOT NULL DEFAULT '',
+  task_id INTEGER UNIQUE REFERENCES community_tasks(id)
+);
+CREATE INDEX IF NOT EXISTS idx_community_task_proposals_queue ON community_task_proposals(status,id);

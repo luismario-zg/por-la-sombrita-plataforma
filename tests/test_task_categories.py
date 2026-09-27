@@ -49,7 +49,7 @@ def test_task_tags_are_one_click_menus_only_for_participants(app):
     assert 'name="priority" value="urgent"' in page and 'aria-current="true" disabled' in page
     assert 'Cambiar prioridad</summary>' not in page and 'Guardar prioridad' not in page
     anonymous=client(app).get('/trabajo').data.decode()
-    assert 'Investigación' in anonymous and 'chip-menu' not in anonymous
+    assert 'Investigación' in anonymous and '/api/community/tasks/' not in anonymous and 'chip-options-title">Cambiar' not in anonymous
     with connect(app.config['DATABASE']) as db:
         db.execute("UPDATE community_tasks SET state='closed' WHERE id=?",(ident,));db.commit()
     closed=c.get('/trabajo').data.decode()
