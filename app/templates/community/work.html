@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">
 <div class="contenedor community-page">
   {% include 'community/_nav.html' %}
   <header class="community-hero"><p class="eyebrow">Organización horizontal</p><h1>Trabajo comunitario</h1>
@@ -28,7 +28,7 @@
     {% else %}<p class="community-empty">No tienes avisos pendientes.</p>{% endif %}
   </section>{% endif %}
 
-  <section class="community-list"><div class="community-section-title"><h2>Tareas</h2><p>{{ tasks|length }} registradas con historial público.</p></div>
+  <section class="community-list"><div class="community-section-title"><h2>Tareas</h2><p>{{ tasks|length }} en esta página con historial público.</p></div>
   {% if tasks|length > 5 %}<nav class="task-index" aria-label="Índice de tareas"><ol>{% for task in tasks %}<li><a href="#tarea-{{ task.id }}">{{ task.title }}</a><span class="task-category" aria-label="Categoría">{{ categories[task.category] }}</span><span class="community-badge">{{ priorities[task.priority] }}</span><span class="task-index-state">{% if task.completed_on %}Realizada · {{ task.performer_name }} · {{ task.completed_on }}{% else %}{{ task_states[task.state] }} · {{ task.assignee_name or 'Por tomar' }}{% endif %}</span></li>{% endfor %}</ol></nav>{% endif %}
   {% for task in tasks %}
     <article class="task-card priority-{{ task.priority }}" id="tarea-{{ task.id }}">
@@ -61,6 +61,7 @@
       {% with comments=task.comments,target_type='task',target_id=task.id %}{% include 'community/_comments.html' %}{% endwith %}
     </article>
   {% else %}<p class="community-empty">Todavía no hay tareas. Una persona con cuenta puede abrir la primera.</p>{% endfor %}
+  {% include '_pagination.html' %}
   </section>
 </div>
 {% endblock %}

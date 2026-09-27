@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from flask import Blueprint,abort,current_app,jsonify,render_template,request
-from .core import connect,db,field,limited,now,require,user,sections,number
+from .core import PAGE_SIZE,connect,db,field,limited,now,page_links,page_number,require,user,sections,number
 
 improvements=Blueprint('improvements',__name__)
 REPO='luismario-zg/por-la-sombrita-plataforma'
@@ -31,8 +31,10 @@ def body():
 
 @improvements.get('/mejoras')
 def page():
-    rows=db().execute('SELECT i.*,u.name AS author_name,s.section_title FROM improvements i JOIN users u ON u.id=i.author LEFT JOIN improvement_sections s ON s.improvement=i.id ORDER BY i.id DESC').fetchall()
-    return render_template('improvements.html',title='Mejoras de la plataforma',items=rows,statuses=STATUSES)
+    number=page_number()
+    rows=db().execute('SELECT i.*,u.name AS author_name,s.section_title FROM improvements i JOIN users u ON u.id=i.author LEFT JOIN improvement_sections s ON s.improvement=i.id ORDER BY i.id DESC LIMIT ? OFFSET ?',(PAGE_SIZE+1,(number-1)*PAGE_SIZE)).fetchall()
+    previous_page,next_page=page_links(number,len(rows)>PAGE_SIZE)
+    return render_template('improvements.html',title='Mejoras de la plataforma',items=rows[:PAGE_SIZE],statuses=STATUSES,previous_page=previous_page,next_page=next_page)
 
 @improvements.get('/mejoras/<int:ident>')
 def detail(ident):

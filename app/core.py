@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib, re, secrets, sqlite3, time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from urllib.parse import urlencode
 from bs4 import BeautifulSoup
 import bleach
 from flask import current_app, g, abort, request
@@ -49,6 +50,18 @@ def connect(path):
 def db():
     if 'db' not in g:g.db=connect(current_app.config['DATABASE'])
     return g.db
+
+PAGE_SIZE=30
+
+def page_number():
+    value=request.args.get('pagina','1')
+    return int(value) if value.isascii() and value.isdecimal() and len(value)<=16 and int(value)>0 else 1
+
+def page_links(page,has_next):
+    def url(number):
+        args=request.args.to_dict(flat=False);args['pagina']=[str(number)]
+        return request.path+'?'+urlencode(args,doseq=True)
+    return (url(page-1) if page>1 else None,url(page+1) if has_next else None)
 
 def init_db(path):
     Path(path).parent.mkdir(parents=True,exist_ok=True,mode=0o700)

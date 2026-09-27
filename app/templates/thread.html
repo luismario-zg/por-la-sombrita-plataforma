@@ -5,7 +5,7 @@
   <h1>{{ thread.title }}</h1>
   <p class="metadata">Inició <strong>{{ thread.author_name }}</strong>{% if thread.guest_author %} <span class="guest-label">Persona invitada</span>{% endif %} · <time datetime="{{ thread.created }}">{{ thread.created|hora }}</time> · {{ thread.document_title }}</p>
 
-  <section class="resumen"><span class="eyebrow">Resumen de la discusión</span>
+  <section class="resumen"><span class="eyebrow">Resumen de la discusión</span><p>La ficha recoge tema, acuerdos, desacuerdos y pendientes; un borrador de IA solo cuenta cuando una persona lo aprueba.</p>
     {% if thread.state=='archived' %}<p>{{ thread.summary }}</p><strong>{{ 'Terminó con edición vinculada' if thread.outcome=='edited' else 'Terminó sin una edición vinculada' }}</strong>{% if thread.revision_id %}<p>Edición vinculada: #{{ thread.revision_id }} · <a href="/documentos/{{ thread.document }}/versiones">ver historial documental</a></p>{% endif %}
     {% elif payload %}<p>{{ payload.summary }}</p><small>{{ 'Ficha aprobada para deliberar' if review.approved else 'Borrador de ficha · requiere revisión' }}{% if stale %} · <strong>Desactualizada: hay mensajes o una versión nueva del elemento.</strong>{% endif %}</small>
     {% else %}<p>{{ thread.topic }}</p><small>Tema inicial. La ficha completa de revisión aún no se ha elaborado.</small>{% endif %}

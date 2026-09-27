@@ -82,6 +82,8 @@ def create_app(config=None):
     @app.after_request
     def headers(response):
         response.headers['X-Content-Type-Options']='nosniff';response.headers['X-Frame-Options']='DENY'
+        if request.is_secure or request.headers.get('X-Forwarded-Proto')=='https':
+            response.headers['Strict-Transport-Security']='max-age=31536000; includeSubDomains'
         response.headers['Referrer-Policy']='strict-origin-when-cross-origin'
         response.headers['Cache-Control']='no-store'
         response.headers['Permissions-Policy']='camera=(), geolocation=(), microphone=()'
@@ -230,6 +232,7 @@ def create_app(config=None):
 
     @app.get('/discusiones')
     def discussions():
+        page=page_number()
         state=request.args.get('estado','active');doc=request.args.get('documento','');section=request.args.get('seccion','');drive_id=request.args.get('archivo','')
         conditions=[];params=[]
         if state=='history':conditions.append("(t.state='archived' OR EXISTS(SELECT 1 FROM events e WHERE e.thread_id=t.id AND e.kind='archived'))")
@@ -240,8 +243,10 @@ def create_app(config=None):
         if drive_id.isdigit():conditions.append('t.drive_item_id=?');params.append(int(drive_id))
         q=THREAD_SELECT
         if conditions:q+=' WHERE '+' AND '.join(conditions)
-        q+=' ORDER BY t.updated DESC,t.id DESC'
-        return render_template('threads.html',title='Historial de discusiones' if state=='history' else 'Discusiones',threads=db().execute(q,params).fetchall(),state=state)
+        q+=' ORDER BY t.updated DESC,t.id DESC LIMIT ? OFFSET ?'
+        rows=db().execute(q,params+[PAGE_SIZE+1,(page-1)*PAGE_SIZE]).fetchall()
+        previous_page,next_page=page_links(page,len(rows)>PAGE_SIZE)
+        return render_template('threads.html',title='Historial de discusiones' if state=='history' else 'Discusiones',threads=rows[:PAGE_SIZE],state=state,previous_page=previous_page,next_page=next_page)
 
     @app.get('/discusiones/<int:ident>')
     def discussion(ident):
@@ -338,8 +343,10 @@ def create_app(config=None):
 
     @app.get('/miembros')
     def members():
-        rows=db().execute('SELECT id,name,role,membership,membership_reference FROM users WHERE active=1 ORDER BY name').fetchall()
-        return render_template('members.html',title='Comunidad y membresía',members=rows)
+        page=page_number()
+        rows=db().execute('SELECT id,name,role,membership,membership_reference FROM users WHERE active=1 ORDER BY name,id LIMIT ? OFFSET ?',(PAGE_SIZE+1,(page-1)*PAGE_SIZE)).fetchall()
+        previous_page,next_page=page_links(page,len(rows)>PAGE_SIZE)
+        return render_template('members.html',title='Comunidad y membresía',members=rows[:PAGE_SIZE],previous_page=previous_page,next_page=next_page)
 
     @app.get('/cuenta')
     def account():return render_template('account.html',title='Tu cuenta',return_to=safe_return_path(request.args.get('next')))

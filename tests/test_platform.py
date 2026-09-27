@@ -258,3 +258,33 @@ def test_drive_thread_stales_when_index_version_changes(app):
     post(owner,'/api/threads/1/state',{'action':'propose_close','summary':'Cierre propuesto.'})
     assert post(owner,'/api/threads/1/state',{'action':'archive','summary':'Se acordó conservar el archivo.','outcome':'edited','revision_id':1,'consensus_confirmed':True}).status_code==400
     assert post(owner,'/api/threads/1/state',{'action':'archive','summary':'Se acordó conservar el archivo.','outcome':'unchanged','consensus_confirmed':True}).status_code==200
+
+
+def test_hsts_only_on_https(app):
+    browser=client(app)
+    assert browser.get('/',base_url='https://localhost').headers['Strict-Transport-Security']=='max-age=31536000; includeSubDomains'
+    assert browser.get('/',headers={'X-Forwarded-Proto':'https'}).headers['Strict-Transport-Security']=='max-age=31536000; includeSubDomains'
+    assert 'Strict-Transport-Security' not in browser.get('/').headers
+
+
+def test_public_lists_paginate_and_keep_discussion_filter(app):
+    with connect(app.config['DATABASE']) as connection:
+        for i in range(31):
+            connection.execute('INSERT INTO users(username,name,password_hash,role,created) VALUES(?,?,?,?,?)',(f'persona{i:02d}',f'Persona {i:02d}','prueba','member',now()))
+            connection.execute('INSERT INTO improvements(title,body,author,created,updated) VALUES(?,?,?,?,?)',(f'Mejora {i:02d}','Descripción',1,now(),now()))
+            connection.execute('''INSERT INTO threads(document,version,section,section_title,section_snapshot,title,topic,author,created,updated)
+                VALUES('plan',1,'sombra','Sombra','Texto',?,?,1,?,?)''',(f'Discusión {i:02d}','Tema',now(),now()))
+    browser=client(app)
+    cases=[('/miembros','Persona 00','Persona 30'),('/mejoras','Mejora 30','Mejora 00'),('/discusiones?estado=all','Discusión 30','Discusión 00')]
+    for path,first,last in cases:
+        separator='&' if '?' in path else '?'
+        first_page=browser.get(path)
+        second=browser.get(path+separator+'pagina=2')
+        assert first_page.status_code==second.status_code==200
+        assert first in first_page.text and last not in first_page.text
+        assert last in second.text and first not in second.text
+        assert 'Anteriores' in second.text and 'Siguientes' in first_page.text
+        for invalid in ['abc','-1']:
+            assert browser.get(path+separator+'pagina='+invalid).status_code==200
+    assert '/discusiones?estado=all&amp;pagina=2' in browser.get('/discusiones?estado=all').text
+    assert 'Membresía en revisión' in browser.get('/miembros').text

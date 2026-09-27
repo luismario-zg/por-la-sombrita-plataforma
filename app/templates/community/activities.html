@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static',filename='community.css') }}">
 <div class="contenedor community-page">{% include 'community/_nav.html' %}
   <header class="community-hero"><p class="eyebrow">Memoria de acción</p><h1>Actividades</h1><p class="texto-grande">Las dinámicas son un tipo de actividad. Cada ficha conserva su estado, fechas, referencia y los datos que aún falta documentar.</p></header>
   {% if me and me.role in ['owner','admin'] %}<section class="community-panel"><h2>Nueva actividad</h2><form data-api="/api/community/activities" class="community-form-grid">

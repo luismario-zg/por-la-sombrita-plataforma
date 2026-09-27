@@ -213,6 +213,7 @@ def test_calls_schedule_visibility_and_safe_internal_image(app):
     payload={"title":"Caminata","copy":"Súmate a documentar sombra.","reference":"D15","image_path":image_path,"exclusive_channel":"Instagram","publish_at":future,"starts_at":start,"valid_until":valid,"permanent":False}
     assert post(owner,"/api/community/calls",payload).status_code==201
     assert "Caminata" in owner.get("/convocatorias").text
+    assert 'alt="Cartel de la convocatoria: Caminata"' in owner.get("/convocatorias").text
     assert "Caminata" not in client(app).get("/convocatorias").text
     with app.test_request_context(),connect(app.config["DATABASE"]) as connection:
         with pytest.raises(Exception) as error:validate_guest_target(connection,"call",1)
@@ -315,3 +316,37 @@ def test_create_task_already_done_by_person_without_account(app):
     assert "Realizada por Natanael el 2026-08-27." in page
     normal=post(ana,"/api/community/tasks",{"title":"Abierta","description":"Sin realizar.","reference":"","priority":"normal","already_done":False,"completed_on":"","performer_id":None,"performer_name":"","note":""})
     assert normal.status_code==201 and normal.get_json()["state"]=="open"
+
+
+def test_work_pagination_and_grouped_history(app):
+    with connect(app.config['DATABASE']) as connection:
+        for i in range(1,33):
+            stamp=f'2026-09-27T00:00:{i:02d}+00:00'
+            connection.execute('INSERT INTO community_tasks(title,description,creator,created,updated) VALUES(?,?,1,?,?)',(f'Tarea {i:02d}','Descripción',stamp,stamp))
+        for i in (1,2,31):
+            connection.execute('UPDATE community_tasks SET deliverable=? WHERE id=?',('Resultado',i))
+            connection.execute('INSERT INTO community_task_events(task_id,actor,kind,detail,created) VALUES(?,1,?,?,?)',(i,'created',f'Evento {i:02d}',now()))
+            connection.execute('INSERT INTO community_task_reviews(task_id,deliverable_version,reviewer,decision,comment,created) VALUES(?,1,1,?,?,?)',(i,'approve',f'Revisión {i:02d}',now()))
+            connection.execute("INSERT INTO community_comments(target_type,target_id,author,body,created) VALUES('task',?,1,?,?)",(i,f'Comentario {i:02d}',now()))
+    browser=client(app)
+    first=browser.get('/trabajo')
+    second=browser.get('/trabajo?pagina=2')
+    assert first.status_code==second.status_code==200
+    assert 'Tarea 32' in first.text and 'Tarea 01' not in first.text
+    assert 'Tarea 01' in second.text and 'Tarea 02' in second.text and 'Tarea 32' not in second.text
+    for i in (1,2):
+        assert f'Evento {i:02d}' in second.text and f'Revisión {i:02d}' in second.text and f'Comentario {i:02d}' in second.text
+    assert 'Siguientes' in first.text and 'Anteriores' in second.text
+    assert browser.get('/trabajo?tarea=1').headers['Location']=='/trabajo?pagina=2#tarea-1'
+    for invalid in ('abc','-1'):
+        assert browser.get('/trabajo?pagina='+invalid).status_code==200
+
+
+def test_community_styles_load_in_head(app):
+    browser=client(app)
+    for path in ('/trabajo','/actividades','/rolitas','/convocatorias'):
+        response=browser.get(path)
+        assert response.status_code==200
+        head,body=response.text.split('</head>',1)
+        assert 'community.css' in head and 'community.css' not in body
+        assert "style-src 'self'" in response.headers['Content-Security-Policy']

@@ -12,6 +12,7 @@ No publicar vulnerabilidades con contraseñas, tokens, base de datos ni informac
 - Contraseñas con scrypt y sal individual, sesiones aleatorias almacenadas como SHA-256, cookies HttpOnly/Secure/SameSite y cambio obligatorio de claves provisionales.
 - Rotación de sesión al entrar y cambiar contraseña; revocación de sesiones al cambiar permisos, desactivar una cuenta o restablecer su contraseña.
 - Origin exacto, contenido JSON y token CSRF para cada mutación; sin CORS permisivo.
+- Las respuestas recibidas por HTTPS incluyen `Strict-Transport-Security: max-age=31536000; includeSubDomains`; las solicitudes HTTP locales no reciben esa cabecera.
 - Permisos comprobados en servidor; el último administrador general activo no puede eliminar su propio acceso privilegiado sin otro administrador general.
 - Editor, Moderador y Desarrollador son capacidades independientes del rol y de la membresía. Las bases y directrices exigen Editor y además rol administrativo; la cola invitada exige Moderador y la planeación técnica exige Desarrollador.
 - Límites persistentes de intentos de acceso, comentarios, hilos y generación asistida; tamaños máximos de solicitudes y campos.

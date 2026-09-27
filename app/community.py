@@ -9,9 +9,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, current_app, jsonify, render_template, request, send_from_directory
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, send_from_directory
 
-from .core import db, field, limited, now, require, user
+from .core import PAGE_SIZE, db, field, limited, now, page_links, page_number, require, user
 
 
 bp = Blueprint("community", __name__)
@@ -224,7 +224,7 @@ def _notify(connection, uid, task_id, kind, title, body, dedupe_key):
         """INSERT OR IGNORE INTO community_notifications
         (user_id,task_id,kind,title,body,href,dedupe_key,created)
         VALUES(?,?,?,?,?,?,?,?)""",
-        (uid, task_id, kind, title, body, f"/trabajo#tarea-{task_id}", dedupe_key, now()),
+        (uid, task_id, kind, title, body, f"/trabajo?tarea={task_id}#tarea-{task_id}", dedupe_key, now()),
     )
 
 
@@ -270,9 +270,16 @@ def _comments(target_type, target_id):
 
 @bp.get("/trabajo")
 def work():
+    target=request.args.get('tarea','')
+    if target.isascii() and target.isdecimal() and len(target)<=16:
+        row=db().execute("""SELECT page FROM (SELECT t.id,(ROW_NUMBER() OVER (
+            ORDER BY t.state='closed',CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated DESC,t.id DESC
+            )-1)/?+1 AS page FROM community_tasks t) WHERE id=?""",(PAGE_SIZE,int(target))).fetchone()
+        if row:return redirect(f"/trabajo?pagina={row['page']}#tarea-{int(target)}")
     current = user()
     if current:
         sync_task_notifications(db())
+    page = page_number()
     tasks = db().execute(
         """SELECT t.*,creator.name AS creator_name,assignee.name AS assignee_name,
         COALESCE(performer.name,NULLIF(t.completed_by_name,'')) AS performer_name,closer.name AS closer_name
@@ -280,21 +287,34 @@ def work():
         LEFT JOIN users assignee ON assignee.id=t.assignee
         LEFT JOIN users performer ON performer.id=t.completed_by
         LEFT JOIN users closer ON closer.id=t.closed_by
-        ORDER BY t.state='closed',CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated DESC"""
+        ORDER BY t.state='closed',CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated DESC,t.id DESC LIMIT ? OFFSET ?""",
+        (PAGE_SIZE+1,(page-1)*PAGE_SIZE),
     ).fetchall()
-    task_data = []
-    for task in tasks:
-        item = dict(task)
-        item["events"] = db().execute(
-            """SELECT e.*,u.name AS actor_name FROM community_task_events e
-            LEFT JOIN users u ON u.id=e.actor WHERE task_id=? ORDER BY e.id""", (task["id"],)
-        ).fetchall()
-        item["reviews"] = db().execute(
-            """SELECT r.*,u.name AS reviewer_name FROM community_task_reviews r
-            JOIN users u ON u.id=r.reviewer WHERE task_id=? ORDER BY r.id""", (task["id"],)
-        ).fetchall()
-        item["comments"] = _comments("task", task["id"])
-        task_data.append(item)
+    previous_page,next_page=page_links(page,len(tasks)>PAGE_SIZE)
+    task_data=[{**dict(task),"events":[],"reviews":[],"comments":[]} for task in tasks[:PAGE_SIZE]]
+    if task_data:
+        by_id={task['id']:task for task in task_data}
+        marks=','.join('?' for _ in by_id)
+        ids=tuple(by_id)
+        for event in db().execute(
+            f"""SELECT e.*,u.name AS actor_name FROM community_task_events e
+            LEFT JOIN users u ON u.id=e.actor WHERE e.task_id IN ({marks}) ORDER BY e.id""",ids
+        ):by_id[event['task_id']]['events'].append(event)
+        for review in db().execute(
+            f"""SELECT r.*,u.name AS reviewer_name FROM community_task_reviews r
+            JOIN users u ON u.id=r.reviewer WHERE r.task_id IN ({marks}) ORDER BY r.id""",ids
+        ):by_id[review['task_id']]['reviews'].append(review)
+        has_attributions=db().execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='guest_attributions'").fetchone()
+        if has_attributions:
+            comments=f"""SELECT c.*,CASE WHEN ga.display_name<>'' THEN ga.display_name ELSE 'Persona invitada' END AS guest_name,
+                ga.submission_id IS NOT NULL AS is_guest,u.name AS author_name FROM community_comments c
+                JOIN users u ON u.id=c.author LEFT JOIN guest_attributions ga
+                ON ga.target_type='community_comment' AND ga.target_id=CAST(c.id AS TEXT)
+                WHERE c.target_type='task' AND c.target_id IN ({marks}) ORDER BY c.id"""
+        else:
+            comments=f"""SELECT c.*,NULL AS guest_name,0 AS is_guest,u.name AS author_name FROM community_comments c
+                JOIN users u ON u.id=c.author WHERE c.target_type='task' AND c.target_id IN ({marks}) ORDER BY c.id"""
+        for comment in db().execute(comments,ids):by_id[comment['target_id']]['comments'].append(comment)
     people = db().execute(
         "SELECT id,name FROM users WHERE active=1 AND role IN ('owner','admin','reviewer','member') ORDER BY name"
     ).fetchall() if current else []
@@ -306,6 +326,7 @@ def work():
     return render_template(
         "community/work.html", title="Trabajo comunitario", tasks=task_data, people=people, everyone=everyone, today=datetime.now(MONTERREY).date().isoformat(),
         priorities=PRIORITIES, categories=TASK_CATEGORIES, task_states=TASK_STATES, notifications=notifications,
+        previous_page=previous_page,next_page=next_page,
     )
 
 
@@ -629,5 +650,6 @@ def publish_guest_comment(connection,submission,moderator_id,stamp):
     keys=submission.keys() if hasattr(submission,"keys") else ()
     body=submission["body"] if "body" in keys else submission["content"]
     cursor=connection.execute("INSERT INTO community_comments(target_type,target_id,author,body,created) VALUES(?,?,?,?,?)",(target_type,target_id,moderator_id,body,stamp))
-    prefixes={"task":"/trabajo#tarea-","activity":"/actividades#actividad-","call":"/convocatorias#convocatoria-","rolita":"/rolitas#comentarios-"}
-    return {"target_type":"community_comment","target_id":cursor.lastrowid,"url":prefixes[target_type]+str(target_id)}
+    prefixes={"activity":"/actividades#actividad-","call":"/convocatorias#convocatoria-","rolita":"/rolitas#comentarios-"}
+    url=f"/trabajo?tarea={target_id}#tarea-{target_id}" if target_type=='task' else prefixes[target_type]+str(target_id)
+    return {"target_type":"community_comment","target_id":cursor.lastrowid,"url":url}

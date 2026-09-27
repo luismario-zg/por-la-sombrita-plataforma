@@ -1,4 +1,8 @@
 /* Formularios y ayudas del módulo de operación comunitaria. Los permisos se validan en el servidor. */
+if(location.pathname==='/trabajo' && /^#tarea-\d+$/.test(location.hash) && !document.getElementById(location.hash.slice(1)) && !new URLSearchParams(location.search).has('tarea')){
+ location.replace('/trabajo?tarea='+location.hash.slice(7)+location.hash);
+}
+
 document.querySelectorAll('[data-permanent]').forEach(box=>{
  const form=box.closest('form');const until=form?.querySelector('[data-valid-until]');
  const update=()=>{if(!until)return;until.disabled=box.checked;until.required=!box.checked;if(box.checked)until.value='';};
